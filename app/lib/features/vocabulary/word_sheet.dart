@@ -34,7 +34,7 @@ class WordSheet extends ConsumerWidget {
     // Looked up by surface form. The pack indexes senses by id, so a tapped
     // inflected form may legitimately have no entry — an honest empty state,
     // not a guess.
-    final ids = const [
+    const ids = [
       '88888888-8888-4888-8888-888888888801',
       '88888888-8888-4888-8888-888888888802',
       '88888888-8888-4888-8888-888888888803',

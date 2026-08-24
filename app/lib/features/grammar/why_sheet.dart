@@ -184,7 +184,7 @@ class _WhySheetState extends ConsumerState<WhySheet> {
                   : _error != null
                       ? EdeErrorState(message: _error!, onRetry: _loadFirst)
                       : _stack.isEmpty
-                          ? EdeEmptyState(
+                          ? const EdeEmptyState(
                               title: 'ยังไม่มีคำอธิบายสำหรับจุดนี้',
                               body: 'ส่วนนี้ยังไม่มีคำอธิบายที่ผู้เชี่ยวชาญเขียนไว้ '
                                   'เราจะไม่แสดงคำอธิบายที่ระบบแต่งขึ้นเอง',

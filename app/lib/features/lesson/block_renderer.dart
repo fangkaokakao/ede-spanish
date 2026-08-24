@@ -525,8 +525,8 @@ class _Review extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 6, right: EdeSpace.md),
+                const Padding(
+                  padding: EdgeInsets.only(top: 6, right: EdeSpace.md),
                   child: AzulejoTile(size: 12, progress: 1),
                 ),
                 Expanded(

@@ -48,11 +48,11 @@ class Attempts extends Table {
   TextColumn get exerciseId => text()();
   TextColumn get sessionId => text()();
   TextColumn get answer => text()();
-  BoolColumn get isCorrect => boolean()();
+  BoolColumn get isCorrect => boolean().nullable()();
 
   /// The grader's full nine-part payload, stored verbatim so a replay returns
   /// byte-identical feedback rather than a re-derived approximation.
-  TextColumn get feedbackJson => text()();
+  TextColumn get feedbackJson => text().nullable()();
   BoolColumn get synced => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 

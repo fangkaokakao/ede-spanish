@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:drift/drift.dart' show Value;
-
 import '../../domain/answer_matcher.dart';
 import '../../domain/entities.dart';
 import '../../domain/repositories.dart';
@@ -39,7 +37,7 @@ class PackCurriculumRepository implements CurriculumRepository {
   @override
   Future<UnitSummary> unit(String unitId) async {
     final raw = (_pack['units'] as List)
-        .cast<Map>()
+        .cast<Map<Object?, Object?>>()
         .firstWhere((u) => u['id'] == unitId,
             orElse: () => throw StateError('unit $unitId not in pack'));
     return _unit(raw.cast<String, dynamic>());
@@ -134,10 +132,8 @@ class PackGrammarRepository implements GrammarRepository {
   PackGrammarRepository({
     required CurriculumRepository curriculum,
     Map<String, dynamic>? pack,
-  })  : _curriculum = curriculum,
-        _pack = pack ?? kContentPack;
+  }) : _pack = pack ?? kContentPack;
 
-  final CurriculumRepository _curriculum;
   final Map<String, dynamic> _pack;
 
   Map<String, dynamic>? _concept(String? id) => id == null
@@ -278,7 +274,7 @@ class LocalLearnerRepository implements LearnerRepository {
             'in_progress' => LessonState.inProgress,
             _ => LessonState.notStarted,
           },
-          lastBlockIndex: r.lastBlockIndex,
+          lastBlockIndex: r.furthestBlock,
         )
     };
   }
@@ -288,7 +284,7 @@ class LocalLearnerRepository implements LearnerRepository {
     final existing = await _db.progressFor(lessonId);
     if (existing?.state == 'completed') return; // never regress a completion
     final furthest =
-        blockIndex > (existing?.lastBlockIndex ?? 0) ? blockIndex : existing!.lastBlockIndex;
+        blockIndex > (existing?.furthestBlock ?? 0) ? blockIndex : existing!.furthestBlock;
     await _db.upsertProgress(lessonId, 'in_progress', furthest);
   }
 
@@ -414,7 +410,7 @@ class LocalAttemptRepository implements AttemptRepository {
     // Idempotent replay, exactly like the server: same key => stored verdict.
     final prior = await _db.attemptById(attemptId);
     if (prior?.feedbackJson != null) {
-      final j = (jsonDecode(prior!.feedbackJson!) as Map).cast<String, dynamic>();
+      final j = (jsonDecode(prior.feedbackJson!) as Map).cast<String, dynamic>();
       return AttemptFeedback.fromJson({...j, 'replayed': true});
     }
 

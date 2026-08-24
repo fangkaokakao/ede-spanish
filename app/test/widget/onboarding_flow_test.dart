@@ -1,4 +1,3 @@
-import 'package:ede/app/providers.dart';
 import 'package:ede/domain/entities.dart';
 import 'package:ede/features/onboarding/onboarding_screens.dart';
 import 'package:flutter/material.dart';

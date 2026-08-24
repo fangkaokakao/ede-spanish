@@ -17,7 +17,7 @@ Future<void> main() async {
   if (Env.dataSource == DataSource.supabase) {
     await Supabase.initialize(
       url: Env.supabaseUrl,
-      anonKey: Env.supabaseAnonKey,
+      publishableKey: Env.supabaseAnonKey,
     );
   }
 

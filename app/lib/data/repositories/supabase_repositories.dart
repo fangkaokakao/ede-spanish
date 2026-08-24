@@ -100,7 +100,7 @@ class SupabaseCurriculumRepository implements CurriculumRepository {
         .eq('id', lessonId)
         .single();
 
-    final versions = (l['lesson_versions'] as List).cast<Map>();
+    final versions = (l['lesson_versions'] as List).cast<Map<Object?, Object?>>();
     final v = versions
         .firstWhere((x) => x['version'] == l['current_version'],
             orElse: () => versions.first)

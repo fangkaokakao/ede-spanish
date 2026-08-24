@@ -6,7 +6,6 @@ import '../../app/providers.dart';
 import '../../design_system/components.dart';
 import '../../design_system/theme.dart';
 import '../../design_system/tokens.dart';
-import '../../domain/entities.dart';
 
 /// Success state. Frames the win as a new *ability*, not as points — and names
 /// the next lesson, so momentum has somewhere to go.

@@ -12,10 +12,8 @@ import 'env.dart';
 /// One place decides which data source the app runs against. No widget and no
 /// controller ever knows which one it got — that is what lets the whole slice
 /// run with no backend and switch to Supabase without touching UI code.
-enum DataSource { local, supabase }
-
 final dataSourceProvider = Provider<DataSource>(
-  (_) => Env.isConfigured ? DataSource.supabase : DataSource.local,
+  (_) => Env.dataSource,
 );
 
 /// Overridden in main() with the opened database, and in tests with an
