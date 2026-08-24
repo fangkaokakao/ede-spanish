@@ -57,9 +57,10 @@ The product direction (`CLAUDE.md`) is PWA-first, ahead of native. What exists:
 **Not executed:** exactly the same limitation as the rest of `app/` — the
 Flutter SDK is not installed in this authoring environment and pub.dev is
 unreachable, so `flutter build web` has never actually run against this
-scaffold. It has been added as CI's sixth step in `flutter-ci.yml` so the
-first real compiler feedback happens automatically on push, the same "red run
-is signal, not a setback" policy the rest of this workflow already uses.
+scaffold. `flutter-ci.yml` does not build for web yet either (the bot that
+authored this change cannot modify files under `.github/workflows/` — add a
+`flutter build web` step there by hand to close this gap, the same "red run
+is signal, not a setback" policy the rest of that workflow already uses).
 
 **Executed:** all 5 migrations apply cleanly to a fresh PostgreSQL 16 (0 errors),
 and `supabase/run_tests.sh` runs **109 pgTAP assertions across 3 suites
