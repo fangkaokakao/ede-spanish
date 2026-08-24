@@ -1,0 +1,39 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+.idea/
+.vscode/
+
+# Generated code is NEVER committed. It is produced by
+#   dart run build_runner build --delete-conflicting-outputs
+# Committing it lets the generated file drift from its source, and CI asserts
+# its absence (see .github/workflows/flutter-ci.yml, bootstrap-guard).
+*.g.dart
+*.freezed.dart
+
+# Local Flutter tooling
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/ios/Pods/
+app/ios/.symlinks/
+app/android/.gradle/
+app/android/local.properties
+
+# Test output
+app/test-results.json
+app/coverage/
+
+# Fonts are added by a human with the real OFL .ttf files (see README).
+# Keep the directory, ignore its contents so nobody commits a licensed binary
+# by accident.
+app/assets/fonts/*
+!app/assets/fonts/.gitkeep
+
+# Local database / secrets
+*.sqlite
+.env
+.env.*

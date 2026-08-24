@@ -1,0 +1,207 @@
+name: Flutter CI
+
+# Sole purpose: put the Flutter vertical slice in front of a real compiler.
+# It has never been compiled, so the first useful output of this workflow is a
+# list of genuine errors — a red run here is a success, not a setback.
+#
+# This workflow deliberately does NOT build an APK/IPA, publish anything, or
+# touch Supabase. Verification only.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# A newer push makes an in-flight run obsolete. Cancel it rather than pay for it.
+concurrency:
+  group: flutter-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Pinned, not floating `stable`.
+  #
+  # Floor is set by the SOURCE, not by pubspec. pubspec declares
+  # `sdk: >=3.7.0 <4.0.0`, but the widgets additionally require:
+  #   Color.withValues(alpha:)  -> Flutter >= 3.27   (10 uses)
+  #   CardThemeData             -> Flutter >= 3.29   (theme.dart; in 3.27 the
+  #                                cardTheme slot still expects CardTheme, so
+  #                                an older SDK fails with a type error)
+  #   ColorScheme.surfaceContainerLowest -> Flutter >= 3.22
+  #
+  # 3.32.0 is a stable release comfortably above that floor and ships Dart
+  # 3.8.x, which satisfies the pubspec constraint. Pinned so a CI result is
+  # reproducible: with a floating channel, a green run can turn red weeks later
+  # from an upstream change and the diff tells you nothing.
+  #
+  # To bump: raise this, re-run, and read the analyzer output before merging.
+  FLUTTER_VERSION: "3.32.0"
+
+jobs:
+  verify:
+    name: pub get -> codegen -> analyze -> test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Every step runs inside the Flutter package. The repo root holds `app/`
+    # and `supabase/`; pubspec.yaml lives at `app/pubspec.yaml`.
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          # Caches the SDK itself. Safe: the key includes the pinned version.
+          cache: true
+
+      # Pub cache only. The build_runner output cache (.dart_tool/build) is
+      # deliberately NOT cached: a stale codegen cache produces generated code
+      # that no longer matches its source, which is precisely the class of
+      # silent drift this project has been hunting. Regenerating from clean
+      # costs seconds and is always truthful.
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ hashFiles('app/pubspec.yaml') }}
+          restore-keys: |
+            pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
+
+      # ---- 1 ------------------------------------------------------------------
+      - name: flutter --version
+        run: flutter --version
+
+      # ---- 2 ------------------------------------------------------------------
+      # If dependency resolution fails, everything after it is noise. Steps run
+      # sequentially and the job aborts on the first non-zero exit, so no
+      # `if:` guards are needed to satisfy fail-fast.
+      - name: flutter pub get
+        run: flutter pub get
+
+      # ---- 3 ------------------------------------------------------------------
+      # app_database.dart declares `part 'app_database.g.dart'`, and that file is
+      # not committed. Until this succeeds, EVERY import of the database is
+      # unresolved and `flutter analyze` emits hundreds of consequential errors
+      # with no diagnostic value. So this is a hard prerequisite: if it fails,
+      # the job stops here and the analyzer never runs.
+      - name: Generate Drift code (build_runner)
+        id: codegen
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Confirm the generated file exists
+        shell: bash
+        run: |
+          if [ ! -f lib/data/local/app_database.g.dart ]; then
+            echo "::error::build_runner reported success but app_database.g.dart is missing."
+            echo "Analysis would be meaningless without it. Failing early."
+            exit 1
+          fi
+          echo "Generated $(wc -l < lib/data/local/app_database.g.dart) lines."
+
+      # ---- 4 ------------------------------------------------------------------
+      # No --fatal-infos yet. This code has never been compiled; errors and
+      # warnings are the signal that matters, and drowning them in style infos
+      # on the first run would be counterproductive. Tighten once green.
+      - name: flutter analyze
+        run: flutter analyze
+
+      # ---- 5 ------------------------------------------------------------------
+      # No SUPABASE_URL / SUPABASE_ANON_KEY, and no DATA_SOURCE. Env.dataSource
+      # requires DATA_SOURCE=supabase *and* both keys present, so the run is
+      # local mode by construction: the embedded content pack plus an in-memory
+      # Drift database from the widget harness. CI needs no credentials and this
+      # workflow defines none.
+      - name: flutter test
+        run: flutter test --reporter expanded --file-reporter json:test-results.json
+
+      # ---- diagnostics --------------------------------------------------------
+      # Only on failure, and only things that actually help: the machine-readable
+      # test report and the generated file whose correctness is the open question.
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-ci-diagnostics
+          path: |
+            app/test-results.json
+            app/lib/data/local/app_database.g.dart
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Cheap guard against the bootstrap regressions already fixed once. Runs in
+  # parallel and needs no SDK, so it reports even when the build is broken.
+  bootstrap-guard:
+    name: Bootstrap consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generated code has a generator declared
+        shell: bash
+        run: |
+          parts=$(grep -rl "^part '" lib | wc -l)
+          if [ "$parts" -gt 0 ] && ! grep -qE '^  build_runner:' pubspec.yaml; then
+            echo "::error::lib declares a 'part' directive but build_runner is not in dev_dependencies."
+            exit 1
+          fi
+
+      - name: No generated code committed
+        shell: bash
+        run: |
+          if find lib -name '*.g.dart' | grep -q .; then
+            echo "::error::A .g.dart file is committed. It will drift from its source."
+            exit 1
+          fi
+
+      - name: No asserted font paths without the font files
+        shell: bash
+        run: |
+          # The font block is intentionally commented out: declaring an asset
+          # path that does not exist breaks `flutter run` on a clean checkout.
+          # Fonts are added by a human with the real .ttf files, never by CI.
+          active=$(grep -cE '^        - asset: assets/fonts/' pubspec.yaml || true)
+          if [ "$active" -gt 0 ]; then
+            missing=0
+            while read -r f; do
+              [ -f "$f" ] || { echo "::error::pubspec declares missing font: $f"; missing=1; }
+            done < <(grep -E '^        - asset: assets/fonts/' pubspec.yaml | sed 's/.*asset: //')
+            [ "$missing" -eq 0 ] || exit 1
+          fi
+
+      - name: Declared asset directories exist
+        shell: bash
+        run: |
+          fail=0
+          while read -r d; do
+            [ -d "$d" ] || { echo "::error::declared asset dir missing: $d"; fail=1; }
+          done < <(grep -E '^    - assets/' pubspec.yaml | sed 's/^    - //')
+          exit $fail
+
+      - name: No secrets committed
+        shell: bash
+        run: |
+          # service_role keys and provider secrets must never reach the client.
+          #
+          # Matches VALUES, not prose. A bare grep for "service_role" fires on
+          # env.dart's comment explaining that no service_role key is present —
+          # a scanner that cries wolf on its own documentation gets muted, so it
+          # looks for an actual key shape or an assignment instead.
+          patterns='(sbp_[a-zA-Z0-9]{20,}|sk-[a-zA-Z0-9]{20,}|eyJ[A-Za-z0-9_-]{30,}\.[A-Za-z0-9_-]{20,}|(service_role|serviceRole)[A-Za-z]*[[:space:]]*[:=][[:space:]]*.?[A-Za-z0-9_-]{16,})'
+          if grep -rnE "$patterns" lib 2>/dev/null; then
+            echo "::error::possible hard-coded secret in app source (see matches above)."
+            exit 1
+          fi
+          echo "No secret values found in app/lib."

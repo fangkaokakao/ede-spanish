@@ -1,0 +1,237 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../app/providers.dart';
+import '../../design_system/components.dart';
+import '../../design_system/learning_widgets.dart';
+import '../../design_system/theme.dart';
+import '../../design_system/tokens.dart';
+import '../../domain/entities.dart';
+
+/// The CEFR journey plus the units of the current level.
+///
+/// Levels with no QA-complete curriculum are shown but not enterable and are
+/// labelled "เร็วๆ นี้" — never stubbed with placeholder lessons, because
+/// calling incomplete content A2 is how a course lies to a learner.
+class CourseMapScreen extends ConsumerWidget {
+  const CourseMapScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final levels = ref.watch(levelsProvider);
+    final units = ref.watch(unitsProvider(Cefr.preA1));
+    final progress = ref.watch(progressProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('เรียน')),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(unitsProvider(Cefr.preA1));
+          ref.invalidate(progressProvider);
+        },
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+              EdeSpace.gutter, EdeSpace.sm, EdeSpace.gutter, EdeSpace.xxxl),
+          children: [
+            levels.when(
+              loading: () => const EdeSkeleton(height: 78),
+              error: (e, _) => EdeErrorState(
+                message: 'โหลดระดับไม่ได้',
+                onRetry: () => ref.invalidate(levelsProvider),
+              ),
+              data: (ls) => _CefrJourney(levels: ls),
+            ),
+            const SizedBox(height: EdeSpace.xl),
+            units.when(
+              loading: () => const Column(
+                children: [
+                  EdeSkeleton(height: 150),
+                  SizedBox(height: EdeSpace.lg),
+                  EdeSkeleton(height: 150),
+                ],
+              ),
+              error: (e, _) => EdeErrorState(
+                message: 'โหลดหน่วยการเรียนไม่ได้ กรุณาลองอีกครั้ง',
+                onRetry: () => ref.invalidate(unitsProvider(Cefr.preA1)),
+              ),
+              data: (us) => us.isEmpty
+                  ? const EdeEmptyState(
+                      title: 'ยังไม่มีหน่วยการเรียน',
+                      body: 'เนื้อหาระดับนี้ยังไม่ได้เผยแพร่')
+                  : Column(
+                      children: [
+                        for (final u in us)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: EdeSpace.lg),
+                            child: _UnitCard(
+                              unit: u,
+                              progress: progress.valueOrNull ?? const {},
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CefrJourney extends StatelessWidget {
+  const _CefrJourney({required this.levels});
+  final List<CefrLevel> levels;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final l in levels)
+            Padding(
+              padding: const EdgeInsets.only(right: EdeSpace.sm),
+              child: Container(
+                width: 96,
+                padding: const EdgeInsets.all(EdeSpace.md),
+                decoration: BoxDecoration(
+                  color: l.isAvailable
+                      ? context.tokens.primarySurface
+                      : context.colors.surface,
+                  borderRadius: BorderRadius.circular(EdeRadius.control),
+                  border: Border.all(
+                    color: l.isAvailable
+                        ? context.colors.primary.withValues(alpha: .5)
+                        : context.colors.outlineVariant,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.level.label,
+                        style: EdeType.thaiBody.copyWith(
+                          color: l.isAvailable
+                              ? context.colors.primary
+                              : context.tokens.inkFaint,
+                          fontWeight: FontWeight.w600,
+                        )),
+                    const SizedBox(height: 2),
+                    Text(l.isAvailable ? l.taglineTh : 'เร็วๆ นี้',
+                        maxLines: 2,
+                        style: EdeType.thaiBodySmall.copyWith(
+                            fontSize: 11.5, color: context.tokens.inkFaint)),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnitCard extends ConsumerWidget {
+  const _UnitCard({required this.unit, required this.progress});
+
+  final UnitSummary unit;
+  final Map<String, LessonProgress> progress;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final completed = unit.lessons
+        .where((l) => progress[l.id]?.state == LessonState.completed)
+        .length;
+    final currentIndex = unit.lessons.indexWhere(
+        (l) => progress[l.id]?.state != LessonState.completed);
+
+    return EdeCard(
+      padding: const EdgeInsets.all(EdeSpace.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GrammarLabel(parts: [unit.level.label, 'หน่วยที่ 1']),
+          const SizedBox(height: 6),
+          Text(unit.titleTh,
+              style: EdeType.thaiTitle.copyWith(color: context.colors.onSurface)),
+          if (unit.titleEs != null)
+            Text(unit.titleEs!,
+                style: EdeType.spanishInline
+                    .copyWith(color: context.tokens.inkFaint)),
+          const SizedBox(height: EdeSpace.md),
+          Text(unit.subtitleTh,
+              style:
+                  EdeType.thaiBodySmall.copyWith(color: context.tokens.inkSoft)),
+          const SizedBox(height: EdeSpace.lg),
+          AzulejoProgressRow(
+            total: unit.lessons.length,
+            completed: completed,
+            currentIndex: currentIndex < 0 ? unit.lessons.length : currentIndex,
+          ),
+          const SizedBox(height: EdeSpace.lg),
+          Divider(color: context.colors.outlineVariant),
+          for (final l in unit.lessons)
+            _LessonRow(
+              lesson: l,
+              state: progress[l.id]?.state ?? LessonState.notStarted,
+              // Only lessons the pack actually contains are enterable.
+              enterable: l.slug == 'pre-a1-u1-l3',
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LessonRow extends StatelessWidget {
+  const _LessonRow({
+    required this.lesson,
+    required this.state,
+    required this.enterable,
+  });
+
+  final LessonSummary lesson;
+  final LessonState state;
+  final bool enterable;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final done = state == LessonState.completed;
+
+    final (icon, colour) = done
+        ? (Icons.check_circle_rounded, t.correct)
+        : enterable
+            ? (Icons.play_circle_fill_rounded, context.colors.primary)
+            : (Icons.lock_outline_rounded, t.inkFaint);
+
+    return Semantics(
+      button: enterable,
+      label: '${lesson.titleTh}, ${lesson.estimatedMinutes} นาที, '
+          '${done ? "เรียนจบแล้ว" : enterable ? "พร้อมเรียน" : "ยังไม่เปิด"}',
+      child: InkWell(
+        onTap: enterable ? () => context.push('/lesson/${lesson.id}') : null,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: kMinTap + 4),
+          padding: const EdgeInsets.symmetric(vertical: EdeSpace.md),
+          child: Row(
+            children: [
+              Icon(icon, size: 22, color: colour),
+              const SizedBox(width: EdeSpace.md),
+              Expanded(
+                child: Text(lesson.titleTh,
+                    style: EdeType.thaiBody.copyWith(
+                      color: enterable || done
+                          ? context.colors.onSurface
+                          : t.inkFaint,
+                    )),
+              ),
+              Text(enterable || done ? '${lesson.estimatedMinutes} นาที' : 'เร็วๆ นี้',
+                  style: EdeType.numeric.copyWith(color: t.inkFaint)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

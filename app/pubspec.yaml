@@ -1,0 +1,134 @@
+name: ede
+description: Español de España — a Spanish-from-Spain learning app for Thai speakers.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  # Both floors are declared, because the Dart floor alone does not express the
+  # real requirement. The widgets need Flutter APIs, not just language features:
+  #   theme.dart      CardThemeData   -> Flutter >= 3.29 (on 3.27 the cardTheme
+  #                                     slot still expects CardTheme, so an
+  #                                     older SDK fails with a type error)
+  #   10 call sites   Color.withValues -> Flutter >= 3.27
+  #
+  # Without the `flutter:` constraint, someone on Flutter 3.24 with a new
+  # enough Dart would pass `pub get` and then hit confusing type errors instead
+  # of a clear "requires Flutter >=3.29.0" message.
+  #
+  # CI pins Flutter 3.32.0 stable (Dart 3.8.x), comfortably above both floors.
+  sdk: ">=3.7.0 <4.0.0"
+  flutter: ">=3.29.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State + DI. One approach only — see 04-technical-architecture.md §43.
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # NOTE: no freezed / json_serializable / riverpod_generator. Entities are
+  # hand-written with explicit fromJson factories, so there is no generated
+  # model code to keep in sync.
+  #
+  # Drift is the ONE exception: app_database.dart declares
+  # `part 'app_database.g.dart'`, so build_runner IS required. It is declared
+  # in dev_dependencies below, and `dart run build_runner build` must be run
+  # once after `flutter pub get` before anything will compile.
+
+  # Backend
+  supabase_flutter: ^2.5.11
+
+  # Local persistence — Drift (SQLite). The review queue is a genuinely
+  # relational query; the sync outbox needs transactions.
+  drift: ^2.19.0
+  # Not imported anywhere on purpose: it ships the native SQLite binary that
+  # drift opens at runtime on iOS/Android. Removing it because "nothing imports
+  # it" breaks the app on device only.
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # Audio + recording. `record` captures the learner's voice; `just_audio` plays
+  # the model audio and the learner's own take back for comparison.
+  #
+  # There is deliberately NO speech-recognition package here. This build does
+  # not evaluate pronunciation, and declaring an ASR dependency would imply a
+  # capability the app does not have. ASR lands with spike S-02 (04 §42).
+  record: ^5.1.2
+  just_audio: ^0.9.40
+
+  collection: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Required: drift_dev is a build_runner builder, so build_runner itself must
+  # be present or `dart run build_runner build` fails with "Could not find
+  # package build_runner". Without it app_database.g.dart is never generated
+  # and nothing in the app compiles.
+  build_runner: ^2.4.12
+  drift_dev: ^2.19.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    # Model audio for lessons. Empty in this slice; the pronunciation and
+    # example blocks show an explicit "no audio yet" state rather than failing.
+    - assets/audio/
+
+  # Type direction (see 03-experience-architecture.md §30.1):
+  #   Spanish target text  -> serif. The script itself marks "this is Spanish."
+  #   Thai explanation     -> IBM Plex Sans Thai, secondary.
+  #   UI / grammar labels  -> IBM Plex Sans, tertiary.
+  # Plex Thai + Plex Sans are one superfamily, so the two scripts stay
+  # metrically and stylistically coherent while the serif stands apart.
+  #
+  # All three are OFL. Download once into assets/fonts/ — see README.
+  # Fonts are NOT declared yet, deliberately.
+  #
+  # Declaring an asset path that does not exist makes `flutter run` fail on a
+  # clean checkout, and these three families cannot be committed from the
+  # environment this repo was authored in. The theme already sets
+  # `fontFamilyFallback`, so the app runs and Thai renders correctly on the
+  # platform default until the real families are added.
+  #
+  # TO ENABLE (recommended before any typography review — the whole
+  # Spanish-serif / Thai-sans hierarchy depends on it):
+  #   1. Download these OFL families and put the .ttf files in assets/fonts/:
+  #        Source Serif 4     -> SourceSerif4-Regular.ttf, SourceSerif4-SemiBold.ttf
+  #        IBM Plex Sans Thai -> IBMPlexSansThai-Regular.ttf,
+  #                              IBMPlexSansThai-Medium.ttf,
+  #                              IBMPlexSansThai-SemiBold.ttf
+  #        IBM Plex Sans      -> IBMPlexSans-Regular.ttf, IBMPlexSans-Medium.ttf,
+  #                              IBMPlexSans-SemiBold.ttf
+  #   2. Uncomment the block below. Filenames must match exactly.
+  #   3. flutter pub get
+  #
+  # fonts:
+  #   - family: SourceSerif
+  #     fonts:
+  #       - asset: assets/fonts/SourceSerif4-Regular.ttf
+  #       - asset: assets/fonts/SourceSerif4-SemiBold.ttf
+  #         weight: 600
+  #   - family: PlexThai
+  #     fonts:
+  #       - asset: assets/fonts/IBMPlexSansThai-Regular.ttf
+  #       - asset: assets/fonts/IBMPlexSansThai-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/IBMPlexSansThai-SemiBold.ttf
+  #         weight: 600
+  #   - family: PlexSans
+  #     fonts:
+  #       - asset: assets/fonts/IBMPlexSans-Regular.ttf
+  #       - asset: assets/fonts/IBMPlexSans-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/IBMPlexSans-SemiBold.ttf
+  #         weight: 600
