@@ -1,4 +1,5 @@
 import 'package:ede/data/repositories/local_repositories.dart';
+import 'package:ede/domain/answer_matcher.dart';
 import 'package:ede/domain/entities.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -76,6 +77,21 @@ void main() {
       expect(s.single.ipaPhonemic, startsWith('/'));
       expect(s.single.ipaPhonetic, startsWith('['));
       expect(s.single.ipaPhonemic, isNot(contains('ʎ')));
+    });
+
+    test('the authored own-name exercise accepts a real learner name', () async {
+      final exercise = await curriculum.exercise(
+        '66666666-6666-4666-8666-666666666601',
+      );
+      expect(
+        AnswerMatcher.matches(
+          'Me llamo Somchai',
+          accepted: exercise.rules.accepted,
+          pattern: exercise.rules.pattern,
+          accentInsensitive: exercise.rules.accentInsensitive,
+        ),
+        isTrue,
+      );
     });
 
     test('a missing lesson fails loudly rather than silently', () {

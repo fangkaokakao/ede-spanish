@@ -104,20 +104,34 @@ void main() {
     }
 
     Future<void> answerMcq(WidgetTester tester, String option) async {
-      final optionTapTarget = find.ancestor(
+      final exerciseFinder = find.ancestor(
         of: find.text(option),
-        matching: find.byType(InkWell),
+        matching: find.byType(ExerciseView),
       );
-      await revealInLesson(tester, optionTapTarget);
-      final target = optionTapTarget.first;
-      final exercise =
-          find.ancestor(of: target, matching: find.byType(ExerciseView)).first;
+      await revealInLesson(tester, exerciseFinder);
+
+      final exercise = exerciseFinder.first;
+      final optionText = find.descendant(
+        of: exercise,
+        matching: find.text(option),
+      );
+      final target = find.ancestor(
+        of: optionText,
+        matching: find.byType(InkWell),
+      ).first;
       await tester.ensureVisible(target);
       await tester.pumpAndSettle();
       await tester.tap(target);
       await tester.pumpAndSettle();
-      final button =
-          find.descendant(of: exercise, matching: find.byType(EdePrimaryButton));
+
+      final liveExercise = find.ancestor(
+        of: find.text(option),
+        matching: find.byType(ExerciseView),
+      ).first;
+      final button = find.descendant(
+        of: liveExercise,
+        matching: find.byType(EdePrimaryButton),
+      );
       await tester.ensureVisible(button);
       await tester.pumpAndSettle();
       await tester.tap(button);

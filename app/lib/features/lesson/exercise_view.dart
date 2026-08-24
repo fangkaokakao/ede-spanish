@@ -393,11 +393,17 @@ class FeedbackPanel extends StatelessWidget {
             if (feedback.whatChanged != null) ...[
               const SizedBox(height: EdeSpace.sm),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const GrammarLabel(parts: ['จุดที่ต่าง']),
                   const SizedBox(width: EdeSpace.sm),
-                  Text(feedback.whatChanged!,
-                      style: EdeType.spanishInline.copyWith(color: accent)),
+                  Expanded(
+                    child: Text(
+                      feedback.whatChanged!,
+                      softWrap: true,
+                      style: EdeType.spanishInline.copyWith(color: accent),
+                    ),
+                  ),
                 ],
               ),
             ],

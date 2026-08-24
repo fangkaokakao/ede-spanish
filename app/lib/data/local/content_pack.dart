@@ -356,7 +356,7 @@ const Map<String, dynamic> kContentPack = {
         'th': 'สองคำ แล้วตามด้วยชื่อ',
       },
       'answer_rules': {
-        'pattern': r'^me llamo[ ]+\p{L}.*$',
+        'pattern': r'^me llamo[ ]+[a-zà-ÿ].*$',
         'accent_insensitive': true,
         'model_answer': 'Me llamo Ana.',
         'error_codes': ['GRAM.PERSON'],
