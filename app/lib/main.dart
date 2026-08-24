@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/env.dart';
-import 'app/providers.dart';
 import 'app/router.dart';
 import 'design_system/theme.dart';
 

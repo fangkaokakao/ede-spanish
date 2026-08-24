@@ -409,7 +409,7 @@ class LocalAttemptRepository implements AttemptRepository {
   }) async {
     // Idempotent replay, exactly like the server: same key => stored verdict.
     final prior = await _db.attemptById(attemptId);
-    if (prior?.feedbackJson != null) {
+    if (prior != null && prior.feedbackJson != null) {
       final j = (jsonDecode(prior.feedbackJson!) as Map).cast<String, dynamic>();
       return AttemptFeedback.fromJson({...j, 'replayed': true});
     }
