@@ -150,7 +150,13 @@ class EdePrimaryButton extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: EdeSpace.sm)],
-                  Text(label),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
       ),

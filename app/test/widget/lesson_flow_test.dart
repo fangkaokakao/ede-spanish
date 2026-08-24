@@ -92,9 +92,35 @@ void main() {
   group('exercise feedback', () {
     Future<void> answerTyped(WidgetTester tester, String text) async {
       await revealInLesson(tester, find.byType(TextField));
-      await tester.enterText(find.byType(TextField).first, text);
+      final field = find.byType(TextField).first;
+      final exercise = find.ancestor(of: field, matching: find.byType(ExerciseView)).first;
+      await tester.enterText(field, text);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('ตรวจคำตอบ').first);
+      final button = find.descendant(of: exercise, matching: find.byType(EdePrimaryButton));
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> answerMcq(WidgetTester tester, String option) async {
+      final optionTapTarget = find.ancestor(
+        of: find.text(option),
+        matching: find.byType(InkWell),
+      );
+      await revealInLesson(tester, optionTapTarget);
+      final target = optionTapTarget.first;
+      final exercise =
+          find.ancestor(of: target, matching: find.byType(ExerciseView)).first;
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+      await tester.tap(target);
+      await tester.pumpAndSettle();
+      final button =
+          find.descendant(of: exercise, matching: find.byType(EdePrimaryButton));
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button);
       await tester.pumpAndSettle();
     }
 
@@ -142,11 +168,7 @@ void main() {
     testWidgets('the mcq marks the vosotros option correct', (tester) async {
       await tester.pumpApp(const LessonScreen(lessonId: lessonId), harness: h);
 
-      await revealInLesson(tester, find.text('¿Cómo os llamáis?'));
-      await tester.tap(find.text('¿Cómo os llamáis?').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('ตรวจคำตอบ').last);
-      await tester.pumpAndSettle();
+      await answerMcq(tester, '¿Cómo os llamáis?');
 
       expect(find.byKey(const ValueKey('feedback-correct')), findsOneWidget);
     });
@@ -155,11 +177,7 @@ void main() {
         (tester) async {
       await tester.pumpApp(const LessonScreen(lessonId: lessonId), harness: h);
 
-      await revealInLesson(tester, find.text('¿Cómo se llaman ustedes?'));
-      await tester.tap(find.text('¿Cómo se llaman ustedes?').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('ตรวจคำตอบ').last);
-      await tester.pumpAndSettle();
+      await answerMcq(tester, '¿Cómo se llaman ustedes?');
 
       expect(find.byKey(const ValueKey('feedback-incorrect')), findsOneWidget);
       // The explanation says ustedes is CORRECT Spanish, just not the default
