@@ -123,6 +123,16 @@ jobs:
       - name: flutter test
         run: flutter test --reporter expanded --file-reporter json:test-results.json
 
+      # ---- 6 ------------------------------------------------------------------
+      # PWA is the current delivery priority (see CLAUDE.md). This has never
+      # been compiled for web either, so — same rule as the rest of this
+      # workflow — a red run here is real signal, not noise. Icon PNGs
+      # referenced by web/manifest.json are not yet committed (see README);
+      # that degrades installability but does not fail this build step, since
+      # `flutter build web` does not validate manifest asset references.
+      - name: flutter build web
+        run: flutter build web
+
       # ---- diagnostics --------------------------------------------------------
       # Only on failure, and only things that actually help: the machine-readable
       # test report and the generated file whose correctness is the open question.

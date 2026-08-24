@@ -16,7 +16,50 @@ Architecture: see `foundation-spec/` (delivered separately).
 | 2 Flutter foundation | design system, theme, router, DI. **Not executed** |
 | 3 Database | **executed and tested locally; NOT applied to any remote project** |
 | First vertical slice | **written** — onboarding → Home → course map → lesson → exercise → speaking → completion → progress. **Not executed** |
+| PWA (web platform) | `app/web/` scaffold added (index.html, manifest.json). **Not built or run** — see "Web / PWA" below |
 | 4–20 | not started |
+
+---
+
+## Web / PWA — honest
+
+The product direction (`CLAUDE.md`) is PWA-first, ahead of native. What exists:
+
+- `app/web/index.html` and `app/web/manifest.json` — the standard Flutter web
+  platform files (`flutter build web`/`flutter run -d chrome` need these to
+  recognise the project as web-enabled; nothing in `pubspec.yaml` needs to
+  change for that).
+- Audio already goes through `just_audio` and `record`, both of which ship
+  federated web implementations that Flutter wires in automatically once the
+  `web/` platform exists — no extra dependency was needed. Playback and
+  recording in this codebase are only ever triggered from an explicit button
+  tap (`AudioControls`, the mic button in `SpeakingView`), which satisfies
+  browsers' user-gesture requirement for audio/microphone access. This is
+  unverified in a real browser (see below), just consistent with how the code
+  is structured.
+
+**Not done, and not faked:**
+- **App icons.** `manifest.json` references `icons/Icon-192.png`,
+  `Icon-512.png`, and maskable variants, plus `favicon.png` — none of these
+  files are committed. This sandbox has no image-generation tool available, so
+  rather than invent placeholder art, the paths are left pointing at files a
+  human needs to add. `flutter build web` will still succeed without them
+  (it doesn't validate manifest asset references); the PWA install prompt and
+  home-screen icon will look wrong until real icons land.
+- **Offline / service worker behaviour.** Flutter generates the service
+  worker at build time; nothing here has been through `flutter build web`
+  yet in this environment (see "Not executed" below), so caching/offline
+  behaviour is unverified.
+- Actual audio assets (`app/assets/audio/` is still empty) and the offline
+  content-pack story (`04` §44) are unrelated, separate gaps — not attempted
+  here, per the instruction not to fabricate lesson/audio content.
+
+**Not executed:** exactly the same limitation as the rest of `app/` — the
+Flutter SDK is not installed in this authoring environment and pub.dev is
+unreachable, so `flutter build web` has never actually run against this
+scaffold. It has been added as CI's sixth step in `flutter-ci.yml` so the
+first real compiler feedback happens automatically on push, the same "red run
+is signal, not a setback" policy the rest of this workflow already uses.
 
 **Executed:** all 5 migrations apply cleanly to a fresh PostgreSQL 16 (0 errors),
 and `supabase/run_tests.sh` runs **109 pgTAP assertions across 3 suites
