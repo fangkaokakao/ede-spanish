@@ -64,11 +64,18 @@ void main() {
   });
 
   group('speaking skip persistence', () {
-    late DeviceSpeechRepository speech;
+    // A database-backed double, not DeviceSpeechRepository: constructing
+    // DeviceSpeechRepository eagerly creates just_audio/record plugin
+    // instances, which touch platform channels before
+    // TestWidgetsFlutterBinding exists and crash a plain `flutter test` run.
+    // Recording/playback are irrelevant here — only skip-vs-submit storage is
+    // under test — so TestSpeechRepository exercises the identical
+    // AppDatabase-backed persistence without ever touching those plugins.
+    late TestSpeechRepository speech;
     const exerciseId = 'ex-speak-1';
     const sessionId = 'session-1';
 
-    setUp(() => speech = DeviceSpeechRepository(db));
+    setUp(() => speech = TestSpeechRepository(db));
 
     test('a skip creates no successful speaking evidence', () async {
       await speech.skipSpeech(
@@ -121,13 +128,13 @@ void main() {
 
     late PackCurriculumRepository curriculum;
     late LocalAttemptRepository attempts;
-    late DeviceSpeechRepository speech;
+    late TestSpeechRepository speech;
     late LocalLearnerRepository learner;
 
     setUp(() {
       curriculum = PackCurriculumRepository();
       attempts = LocalAttemptRepository(db, curriculum);
-      speech = DeviceSpeechRepository(db);
+      speech = TestSpeechRepository(db);
       learner = LocalLearnerRepository(db, curriculum, attempts, speech);
     });
 

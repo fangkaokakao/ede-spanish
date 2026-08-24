@@ -171,6 +171,96 @@ class FakeSpeechRepository implements SpeechRepository {
   Future<Set<String>> skippedExerciseIds() async => _skipped;
 }
 
+/// Persistence-only test double: real [AppDatabase]-backed skip/submit
+/// separation (exactly [DeviceSpeechRepository]'s storage logic), but never
+/// constructs `AudioRecorder`/`AudioPlayer`. Use this — not
+/// [DeviceSpeechRepository] — in tests that assert on stored evidence but
+/// never actually record or play audio: merely constructing
+/// [DeviceSpeechRepository] touches just_audio/record platform channels
+/// before `TestWidgetsFlutterBinding` exists, which crashes plain
+/// `flutter test` unit tests. [FakeSpeechRepository] is the right choice
+/// instead when a test only needs the in-memory contract and does not care
+/// whether evidence survives a real database round-trip.
+class TestSpeechRepository implements SpeechRepository {
+  TestSpeechRepository(this._db);
+
+  final AppDatabase _db;
+
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<void> startRecording(String filePath) async {
+    throw UnsupportedError(
+        'TestSpeechRepository does not record audio; use DeviceSpeechRepository '
+        'or FakeSpeechRepository if a test needs this.');
+  }
+
+  @override
+  Future<String?> stopRecording() async => throw UnsupportedError(
+      'TestSpeechRepository does not record audio; use DeviceSpeechRepository '
+      'or FakeSpeechRepository if a test needs this.');
+
+  @override
+  Future<void> playback(String filePath) async {
+    throw UnsupportedError(
+        'TestSpeechRepository does not play audio; use DeviceSpeechRepository '
+        'or FakeSpeechRepository if a test needs this.');
+  }
+
+  @override
+  Future<void> stopPlayback() async {}
+
+  @override
+  Future<void> submitSpeech({
+    required String submissionId,
+    required String exerciseId,
+    required String sessionId,
+    String? audioPath,
+    int? durationMs,
+  }) async {
+    await _db.saveSpeech(SpeechRow(
+      submissionId: submissionId,
+      exerciseId: exerciseId,
+      sessionId: sessionId,
+      audioPath: audioPath,
+      durationMs: durationMs,
+      skipped: false,
+      skipReason: null,
+      synced: false,
+      createdAt: DateTime.now(),
+    ));
+  }
+
+  @override
+  Future<Set<String>> submittedExerciseIds() async =>
+      (await _db.speechExerciseIds()).toSet();
+
+  @override
+  Future<void> skipSpeech({
+    required String submissionId,
+    required String exerciseId,
+    required String sessionId,
+    required SkipReason reason,
+  }) async {
+    await _db.saveSpeech(SpeechRow(
+      submissionId: submissionId,
+      exerciseId: exerciseId,
+      sessionId: sessionId,
+      audioPath: null,
+      durationMs: null,
+      skipped: true,
+      skipReason: reason.wire,
+      synced: false,
+      createdAt: DateTime.now(),
+    ));
+  }
+
+  @override
+  Future<Set<String>> skippedExerciseIds() async =>
+      (await _db.skippedSpeechExerciseIds()).toSet();
+}
+
 /// Plays the bundled model audio for a lesson. Falls back silently when the
 /// asset is absent, which it is until the recorded es-ES voices are dropped in —
 /// the UI shows an explanatory state instead of throwing.
