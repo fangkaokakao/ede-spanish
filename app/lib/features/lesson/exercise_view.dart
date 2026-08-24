@@ -368,20 +368,20 @@ class FeedbackPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: EdeSpace.sm,
+            runSpacing: EdeSpace.xs,
             children: [
               // Never colour alone: icon + text label carry the verdict.
               Icon(ok ? Icons.check_circle_rounded : Icons.refresh_rounded,
                   size: 20, color: accent),
-              const SizedBox(width: EdeSpace.sm),
               Text(ok ? 'ถูกต้อง' : 'ลองอีกครั้ง',
                   style: EdeType.thaiBody
                       .copyWith(color: accent, fontWeight: FontWeight.w600)),
-              if (ok) ...[
-                const SizedBox(width: EdeSpace.sm),
+              if (ok)
                 Text('¡Muy bien!',
                     style: EdeType.spanishInline.copyWith(color: accent)),
-              ],
             ],
           ),
           if (!ok) ...[
