@@ -5,6 +5,8 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../domain/entities.dart' show nextFurthestBlock;
+
 part 'app_database.g.dart'; // run: dart run build_runner build
 
 /// Local persistence for this slice.
@@ -70,6 +72,12 @@ class SpeechAttempts extends Table {
   BoolColumn get synced => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
+  /// A skip is stored in the same table but is never successful evidence: it
+  /// carries no audio, no duration, and is filtered out of every query that
+  /// answers "did the learner submit this speech exercise".
+  BoolColumn get skipped => boolean().withDefault(const Constant(false))();
+  TextColumn get skipReason => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {submissionId};
 }
@@ -112,7 +120,18 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.memory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(speechAttempts, speechAttempts.skipped);
+            await m.addColumn(speechAttempts, speechAttempts.skipReason);
+          }
+        },
+      );
 
   // ------------------------------------------------------------ preferences --
 
@@ -149,6 +168,20 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
 
+  /// Read-compare-write, so it MUST run inside a transaction: two overlapping
+  /// calls (e.g. several blocks crediting in the same frame) would otherwise
+  /// both read the same stale `furthestBlock`, and whichever write lands last
+  /// would silently overwrite a higher value with a lower one. `transaction()`
+  /// serializes concurrent calls on this database, closing that race.
+  Future<void> markBlockViewed(String lessonId, int blockIndex) =>
+      transaction(() async {
+        final existing = await progressFor(lessonId);
+        if (existing?.state == 'completed') return; // never regress a completion
+        final furthest =
+            nextFurthestBlock(current: existing?.furthestBlock ?? 0, reached: blockIndex);
+        await upsertProgress(lessonId, 'in_progress', furthest);
+      });
+
   // --------------------------------------------------------------- attempts --
 
   Future<AttemptRow?> attemptById(String attemptId) =>
@@ -177,8 +210,18 @@ class AppDatabase extends _$AppDatabase {
   Future<void> saveSpeech(SpeechRow row) =>
       into(speechAttempts).insertOnConflictUpdate(row);
 
+  /// Successful evidence only. A skipped attempt (see [skippedSpeechExerciseIds])
+  /// is deliberately excluded — it must never be able to satisfy a required
+  /// speech exercise.
   Future<List<String>> speechExerciseIds() async {
-    final rows = await select(speechAttempts).get();
+    final rows =
+        await (select(speechAttempts)..where((t) => t.skipped.equals(false))).get();
+    return rows.map((r) => r.exerciseId).toSet().toList();
+  }
+
+  Future<List<String>> skippedSpeechExerciseIds() async {
+    final rows =
+        await (select(speechAttempts)..where((t) => t.skipped.equals(true))).get();
     return rows.map((r) => r.exerciseId).toSet().toList();
   }
 

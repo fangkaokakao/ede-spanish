@@ -41,6 +41,11 @@ class _SpeakingViewState extends ConsumerState<SpeakingView> {
   String? _recordingPath;
   String? _error;
   bool _submitted = false;
+  bool _skipped = false;
+  // Set whenever the environment itself is the reason recording isn't
+  // happening (denied permission, unsupported platform, a recorder failure).
+  // Null means any skip would be the learner's own choice.
+  SkipReason? _suggestedSkipReason;
   DateTime? _startedAt;
   Timer? _ticker;
   Duration _elapsed = Duration.zero;
@@ -69,12 +74,24 @@ class _SpeakingViewState extends ConsumerState<SpeakingView> {
     }
 
     setState(() => _busy = true);
-    final granted = await repo.hasPermission();
+    bool granted;
+    try {
+      granted = await repo.hasPermission();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = 'อุปกรณ์นี้ไม่รองรับการบันทึกเสียง';
+        _suggestedSkipReason = SkipReason.unsupportedPlatform;
+      });
+      return;
+    }
     if (!granted) {
       if (!mounted) return;
       setState(() {
         _busy = false;
         _error = 'ต้องอนุญาตให้ใช้ไมโครโฟนก่อน จึงจะบันทึกเสียงได้';
+        _suggestedSkipReason = SkipReason.permissionDenied;
       });
       return;
     }
@@ -92,6 +109,7 @@ class _SpeakingViewState extends ConsumerState<SpeakingView> {
         _recording = true;
         _busy = false;
         _error = null;
+        _suggestedSkipReason = null;
         _recordingPath = null;
       });
     } catch (e) {
@@ -99,6 +117,7 @@ class _SpeakingViewState extends ConsumerState<SpeakingView> {
       setState(() {
         _busy = false;
         _error = 'เริ่มบันทึกเสียงไม่ได้ ลองอีกครั้ง';
+        _suggestedSkipReason = SkipReason.recorderFailed;
       });
     }
   }
@@ -125,6 +144,35 @@ class _SpeakingViewState extends ConsumerState<SpeakingView> {
       setState(() {
         _busy = false;
         _error = 'บันทึกไม่สำเร็จ ลองอีกครั้ง — เสียงที่อัดไว้ยังอยู่';
+      });
+    }
+  }
+
+  /// Skips this speaking block. Stored separately from [submitSpeech]
+  /// evidence (see SpeechRepository.skipSpeech) — a skip never counts as
+  /// pronunciation evidence and never produces a score. If this block is
+  /// required, the lesson stays incomplete until the learner comes back and
+  /// actually records it; if it's optional, nothing here blocks completion.
+  Future<void> _skip(SkipReason reason) async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(speechRepositoryProvider).skipSpeech(
+            submissionId: _submissionId(),
+            exerciseId: widget.exercise.id,
+            sessionId: widget.sessionId,
+            reason: reason,
+          );
+      if (!mounted) return;
+      setState(() {
+        _skipped = true;
+        _busy = false;
+      });
+      ref.invalidate(satisfiedProvider);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = 'ข้ามไม่สำเร็จ ลองอีกครั้ง';
       });
     }
   }
@@ -209,79 +257,108 @@ class _SpeakingViewState extends ConsumerState<SpeakingView> {
                 style: EdeType.thaiBodySmall.copyWith(color: t.retry)),
           ],
 
-          if (_recordingPath != null && !_recording) ...[
+          if (_submitted) ...[
             const SizedBox(height: EdeSpace.lg),
-            Wrap(
-              spacing: EdeSpace.sm,
-              runSpacing: EdeSpace.sm,
+            Row(
               children: [
-                EdeTextButton(
-                  icon: Icons.play_circle_outline_rounded,
-                  label: 'ฟังเสียงตัวเอง',
-                  onPressed: () => ref
-                      .read(speechRepositoryProvider)
-                      .playback(_recordingPath!),
-                ),
-                EdeTextButton(
-                  icon: Icons.compare_arrows_rounded,
-                  label: 'ฟังเสียงต้นแบบ',
-                  onPressed: () => audio.play('pre-a1/u1/llamo-word.m4a'),
-                ),
-                EdeTextButton(
-                  icon: Icons.refresh_rounded,
-                  label: 'อัดใหม่',
-                  onPressed: () => setState(() {
-                    _recordingPath = null;
-                    _elapsed = Duration.zero;
-                  }),
+                Icon(Icons.check_circle_rounded, size: 20, color: t.correct),
+                const SizedBox(width: EdeSpace.sm),
+                Text('ทำแบบฝึกหัดพูดแล้ว',
+                    style: EdeType.thaiBody.copyWith(color: t.correct)),
+              ],
+            ),
+          ] else if (_skipped) ...[
+            // Deliberately NOT a check mark: a skip is not speaking evidence,
+            // and must never be shown as if the exercise had been completed.
+            const SizedBox(height: EdeSpace.lg),
+            Row(
+              children: [
+                Icon(Icons.skip_next_rounded, size: 20, color: t.inkSoft),
+                const SizedBox(width: EdeSpace.sm),
+                Expanded(
+                  child: Text('ข้ามการฝึกพูดข้อนี้แล้ว — ยังไม่มีการบันทึกเสียง',
+                      style: EdeType.thaiBody.copyWith(color: t.inkSoft)),
                 ),
               ],
             ),
-
-            // The honesty notice. Stated before the learner can wonder why
-            // there is no score.
-            const SizedBox(height: EdeSpace.lg),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(EdeSpace.lg),
-              decoration: BoxDecoration(
-                color: t.accentSurface,
-                borderRadius: BorderRadius.circular(EdeRadius.control),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ] else ...[
+            if (_recordingPath != null && !_recording) ...[
+              const SizedBox(height: EdeSpace.lg),
+              Wrap(
+                spacing: EdeSpace.sm,
+                runSpacing: EdeSpace.sm,
                 children: [
-                  Icon(Icons.info_outline_rounded, size: 18, color: t.accent),
-                  const SizedBox(width: EdeSpace.sm),
-                  Expanded(
-                    child: Text(
-                      'ระบบตรวจการออกเสียงอัตโนมัติยังไม่เปิดใช้งาน '
-                      'แอปจะไม่ให้คะแนนที่เดาขึ้นมาเอง — ตอนนี้ลองฟังเสียงต้นแบบ '
-                      'สลับกับเสียงตัวเอง แล้วสังเกตเสียง ll ว่าใกล้ ย หรือยัง',
-                      style: EdeType.thaiBodySmall
-                          .copyWith(color: context.colors.onSurface),
-                    ),
+                  EdeTextButton(
+                    icon: Icons.play_circle_outline_rounded,
+                    label: 'ฟังเสียงตัวเอง',
+                    onPressed: () => ref
+                        .read(speechRepositoryProvider)
+                        .playback(_recordingPath!),
+                  ),
+                  EdeTextButton(
+                    icon: Icons.compare_arrows_rounded,
+                    label: 'ฟังเสียงต้นแบบ',
+                    onPressed: () => audio.play('pre-a1/u1/llamo-word.m4a'),
+                  ),
+                  EdeTextButton(
+                    icon: Icons.refresh_rounded,
+                    label: 'อัดใหม่',
+                    onPressed: () => setState(() {
+                      _recordingPath = null;
+                      _elapsed = Duration.zero;
+                    }),
                   ),
                 ],
               ),
-            ),
 
-            const SizedBox(height: EdeSpace.lg),
-            if (_submitted)
-              Row(
-                children: [
-                  Icon(Icons.check_circle_rounded, size: 20, color: t.correct),
-                  const SizedBox(width: EdeSpace.sm),
-                  Text('ทำแบบฝึกหัดพูดแล้ว',
-                      style: EdeType.thaiBody.copyWith(color: t.correct)),
-                ],
-              )
-            else
+              // The honesty notice. Stated before the learner can wonder why
+              // there is no score.
+              const SizedBox(height: EdeSpace.lg),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(EdeSpace.lg),
+                decoration: BoxDecoration(
+                  color: t.accentSurface,
+                  borderRadius: BorderRadius.circular(EdeRadius.control),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline_rounded, size: 18, color: t.accent),
+                    const SizedBox(width: EdeSpace.sm),
+                    Expanded(
+                      child: Text(
+                        'ระบบตรวจการออกเสียงอัตโนมัติยังไม่เปิดใช้งาน '
+                        'แอปจะไม่ให้คะแนนที่เดาขึ้นมาเอง — ตอนนี้ลองฟังเสียงต้นแบบ '
+                        'สลับกับเสียงตัวเอง แล้วสังเกตเสียง ll ว่าใกล้ ย หรือยัง',
+                        style: EdeType.thaiBodySmall
+                            .copyWith(color: context.colors.onSurface),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: EdeSpace.lg),
               EdePrimaryButton(
                 label: 'ส่งการฝึกพูดนี้',
                 loading: _busy,
                 onPressed: _submit,
               ),
+            ],
+
+            const SizedBox(height: EdeSpace.md),
+            Center(
+              child: EdeTextButton(
+                icon: Icons.skip_next_rounded,
+                label: _suggestedSkipReason != null
+                    ? 'ข้ามข้อนี้ไปก่อน'
+                    : 'ข้ามการฝึกพูดนี้',
+                onPressed: _busy
+                    ? null
+                    : () => _skip(_suggestedSkipReason ?? SkipReason.learnerChoice),
+              ),
+            ),
           ],
         ],
       ),

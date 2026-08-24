@@ -28,7 +28,16 @@ class LessonScreen extends ConsumerStatefulWidget {
 
 class _LessonScreenState extends ConsumerState<LessonScreen> {
   final _scroll = ScrollController();
+
+  // Reach state is restored from persistence before any write is allowed —
+  // otherwise a block credited while restore is still in flight could race
+  // the restored value and the two updates could interleave out of order.
+  // Anything reached while restore is pending is buffered in
+  // `_pendingBeforeRestore` and reconciled (never regressed, see
+  // nextFurthestBlock) the moment the persisted value is known.
+  bool _restored = false;
   int _furthestBlock = 0;
+  int _pendingBeforeRestore = -1;
 
   @override
   void dispose() {
@@ -36,17 +45,38 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
     super.dispose();
   }
 
+  void _restoreIfNeeded(Map<String, LessonProgress>? progress) {
+    if (_restored || progress == null) return;
+    final persisted = progress[widget.lessonId]?.lastBlockIndex ?? 0;
+    _furthestBlock = _pendingBeforeRestore < 0
+        ? persisted
+        : nextFurthestBlock(current: persisted, reached: _pendingBeforeRestore);
+    _restored = true;
+    if (_furthestBlock > persisted) {
+      final reconciled = _furthestBlock;
+      WidgetsBinding.instance.addPostFrameCallback((_) => ref
+          .read(learnerRepositoryProvider)
+          .markBlockViewed(widget.lessonId, reconciled));
+    }
+  }
+
   void _noteBlockViewed(int index) {
+    if (!_restored) {
+      if (index > _pendingBeforeRestore) _pendingBeforeRestore = index;
+      return;
+    }
     if (index <= _furthestBlock) return;
     _furthestBlock = index;
     // Reading position is one of the few things a client legitimately owns.
     ref.read(learnerRepositoryProvider).markBlockViewed(widget.lessonId, index);
+    ref.invalidate(progressProvider);
   }
 
   @override
   Widget build(BuildContext context) {
     final lessonAsync = ref.watch(lessonProvider(widget.lessonId));
     final sessionAsync = ref.watch(lessonSessionProvider(widget.lessonId));
+    _restoreIfNeeded(ref.watch(progressProvider).valueOrNull);
 
     return Scaffold(
       body: SafeArea(
@@ -104,7 +134,12 @@ class _LoadingLesson extends StatelessWidget {
       );
 }
 
-class _Body extends ConsumerWidget {
+/// Credits a block as "reached" only once it has actually scrolled into the
+/// viewport — never merely because ListView.itemBuilder built (or Flutter's
+/// cacheExtent pre-built) it. Every built item gets a GlobalKey; after each
+/// layout pass and on every scroll notification, each key's RenderBox
+/// position is checked against the list's own viewport bounds.
+class _Body extends ConsumerStatefulWidget {
   const _Body({
     required this.lesson,
     required this.sessionId,
@@ -118,33 +153,80 @@ class _Body extends ConsumerWidget {
   final void Function(int) onBlockViewed;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends ConsumerState<_Body> {
+  final _viewportKey = GlobalKey<State<StatefulWidget>>();
+  final Map<int, GlobalKey<State<StatefulWidget>>> _itemKeys = {};
+
+  GlobalKey<State<StatefulWidget>> _keyFor(int index) =>
+      _itemKeys.putIfAbsent(index, GlobalKey<State<StatefulWidget>>.new);
+
+  void _scheduleVisibilityCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkVisibility());
+  }
+
+  void _checkVisibility() {
+    final viewport = _viewportKey.currentContext?.findRenderObject();
+    if (viewport is! RenderBox || !viewport.attached) return;
+    final viewportRect = Offset.zero & viewport.size;
+
+    for (final entry in _itemKeys.entries) {
+      final box = entry.value.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.attached) continue;
+      final topLeft = box.localToGlobal(Offset.zero, ancestor: viewport);
+      final itemRect = topLeft & box.size;
+      if (itemRect.overlaps(viewportRect)) {
+        widget.onBlockViewed(entry.key);
+      }
+    }
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    _checkVisibility();
+    return false;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleVisibilityCheck();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final satisfied = ref.watch(satisfiedProvider);
+    _scheduleVisibilityCheck();
 
     return Column(
       children: [
-        _LessonHeader(lesson: lesson),
+        _LessonHeader(lesson: widget.lesson),
         Expanded(
-          child: ListView.separated(
-            controller: scroll,
-            padding: const EdgeInsets.fromLTRB(
-                EdeSpace.gutter, EdeSpace.lg, EdeSpace.gutter, EdeSpace.xxxl),
-            itemCount: lesson.blocks.length + 1,
-            separatorBuilder: (_, __) => const SizedBox(height: EdeSpace.lg),
-            itemBuilder: (context, i) {
-              if (i == lesson.blocks.length) {
-                return _FinishSection(lesson: lesson, satisfied: satisfied);
-              }
-              // Notify after layout so the write happens off the build path.
-              WidgetsBinding.instance
-                  .addPostFrameCallback((_) => onBlockViewed(i));
-              return BlockRenderer(
-                block: lesson.blocks[i],
-                lessonId: lesson.id,
-                sessionId: sessionId,
-                onExerciseGraded: (_, __) => ref.invalidate(satisfiedProvider),
-              );
-            },
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleScrollNotification,
+            child: ListView.separated(
+              key: _viewportKey,
+              controller: widget.scroll,
+              padding: const EdgeInsets.fromLTRB(
+                  EdeSpace.gutter, EdeSpace.lg, EdeSpace.gutter, EdeSpace.xxxl),
+              itemCount: widget.lesson.blocks.length + 1,
+              separatorBuilder: (_, __) => const SizedBox(height: EdeSpace.lg),
+              itemBuilder: (context, i) {
+                if (i == widget.lesson.blocks.length) {
+                  return _FinishSection(lesson: widget.lesson, satisfied: satisfied);
+                }
+                return KeyedSubtree(
+                  key: _keyFor(i),
+                  child: BlockRenderer(
+                    block: widget.lesson.blocks[i],
+                    lessonId: widget.lesson.id,
+                    sessionId: widget.sessionId,
+                    onExerciseGraded: (_, __) => ref.invalidate(satisfiedProvider),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -274,9 +356,21 @@ class _FinishSectionState extends ConsumerState<_FinishSection> {
     final sat = widget.satisfied.valueOrNull;
     final correct = sat?.correct ?? const <String>{};
     final spoken = sat?.spoken ?? const <String>{};
+    final progress =
+        ref.watch(progressProvider).valueOrNull?[widget.lesson.id];
+    final blocksViewed = (progress?.lastBlockIndex ?? 0) + 1;
 
-    final done = rules.requiredCorrectExercises.every(correct.contains) &&
-        rules.requiredSpeechExercises.every(spoken.contains);
+    // The single source of truth for "is this lesson done" — the same
+    // CompletionRules.missingFor() the local completeLesson() mirror uses, so
+    // the button is never enabled for something the server (or its local
+    // mirror) would then refuse.
+    final missingNow = rules.missingFor(
+      correctExerciseIds: correct,
+      spokenExerciseIds: spoken,
+      blocksViewed: blocksViewed,
+    );
+    final done = missingNow.isEmpty;
+    final needsMoreReading = missingNow.contains('blocks_viewed');
 
     return EdeCard(
       padding: const EdgeInsets.all(EdeSpace.xl),
@@ -304,6 +398,8 @@ class _FinishSectionState extends ConsumerState<_FinishSection> {
                 ),
               for (final id in rules.requiredSpeechExercises)
                 RequirementChip(labelTh: 'ฝึกพูด', done: spoken.contains(id)),
+              if (rules.minBlocksViewed > 0)
+                RequirementChip(labelTh: 'อ่านเนื้อหาให้ครบ', done: !needsMoreReading),
             ],
           ),
           if (_missing.isNotEmpty) ...[

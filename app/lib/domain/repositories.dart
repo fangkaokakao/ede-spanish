@@ -68,7 +68,20 @@ abstract interface class SpeechRepository {
     int? durationMs,
   });
 
+  /// Registers that the speaking task was skipped, and why. This is stored
+  /// separately from [submitSpeech] evidence and NEVER appears in
+  /// [submittedExerciseIds] — a skip must never be able to satisfy a required
+  /// speech exercise, and must never be read back as pronunciation evidence.
+  Future<void> skipSpeech({
+    required String submissionId,
+    required String exerciseId,
+    required String sessionId,
+    required SkipReason reason,
+  });
+
   Future<Set<String>> submittedExerciseIds();
+
+  Future<Set<String>> skippedExerciseIds();
 }
 
 abstract interface class GrammarRepository {

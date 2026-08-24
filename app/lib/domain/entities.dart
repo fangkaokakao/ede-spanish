@@ -91,6 +91,72 @@ class CompletionRules {
             (j['required_speech_exercises'] as List? ?? const []).cast<String>(),
         minBlocksViewed: (j['min_blocks_viewed'] as int?) ?? 0,
       );
+
+  /// The single source of truth for "is this lesson done". Used by the local
+  /// mirror of learning.complete_lesson() AND by the finish-section UI, so the
+  /// two can never disagree about what is still outstanding.
+  ///
+  /// [blocksViewed] is a COUNT (furthest block index reached + 1), not an
+  /// index — a learner who has reached index 0 has viewed 1 block.
+  ///
+  /// A speech exercise that was only skipped (see SkipReason) must never
+  /// appear in [spokenExerciseIds]: skip evidence and success evidence are
+  /// stored separately, so an optional skip is silently ignored here and a
+  /// required skip surfaces as missing, exactly like never having attempted it.
+  List<String> missingFor({
+    required Set<String> correctExerciseIds,
+    required Set<String> spokenExerciseIds,
+    required int blocksViewed,
+  }) =>
+      [
+        for (final id in requiredCorrectExercises)
+          if (!correctExerciseIds.contains(id)) 'correct:$id',
+        for (final id in requiredSpeechExercises)
+          if (!spokenExerciseIds.contains(id)) 'speech:$id',
+        if (blocksViewed < minBlocksViewed) 'blocks_viewed',
+      ];
+
+  bool isSatisfiedBy({
+    required Set<String> correctExerciseIds,
+    required Set<String> spokenExerciseIds,
+    required int blocksViewed,
+  }) =>
+      missingFor(
+        correctExerciseIds: correctExerciseIds,
+        spokenExerciseIds: spokenExerciseIds,
+        blocksViewed: blocksViewed,
+      ).isEmpty;
+}
+
+/// The furthest block a learner has actually reached never regresses: reaching
+/// a lower index later (e.g. scrolling back up) must not shrink the saved
+/// value. Centralized here so neither the UI nor the persistence layer
+/// reimplements this comparison.
+int nextFurthestBlock({required int current, required int reached}) =>
+    reached > current ? reached : current;
+
+/// Why a required or optional speaking block has no successful evidence.
+/// Stored separately from a successful [SpeechRepository.submitSpeech] — a
+/// skip is never treated as, and never produces, speaking evidence.
+enum SkipReason {
+  permissionDenied,
+  unsupportedPlatform,
+  recorderFailed,
+  learnerChoice,
+  asrInconclusive,
+}
+
+extension SkipReasonX on SkipReason {
+  String get wire => switch (this) {
+        SkipReason.permissionDenied => 'permission_denied',
+        SkipReason.unsupportedPlatform => 'unsupported_platform',
+        SkipReason.recorderFailed => 'recorder_failed',
+        SkipReason.learnerChoice => 'learner_choice',
+        SkipReason.asrInconclusive => 'asr_inconclusive',
+      };
+
+  static SkipReason parse(String s) => SkipReason.values
+      .firstWhere((r) => r.wire == s, orElse: () => SkipReason.learnerChoice);
 }
 
 class Lesson {
