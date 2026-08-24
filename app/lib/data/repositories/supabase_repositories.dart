@@ -402,6 +402,27 @@ class SupabaseSpeechRepository implements SpeechRepository {
   Future<void> stopPlayback() => _inner.stopPlayback();
   @override
   Future<Set<String>> submittedExerciseIds() => _inner.submittedExerciseIds();
+  @override
+  Future<Set<String>> skippedExerciseIds() => _inner.skippedExerciseIds();
+
+  /// Kept local-only for now: no skip-reporting RPC exists yet in this slice
+  /// (assess.submit_speech covers only successful submissions), so recording a
+  /// skip must not invent a server call. The skip still satisfies its purpose
+  /// locally — it is stored separately from success evidence and blocks
+  /// completion of a required speech exercise exactly like DeviceSpeechRepository.
+  @override
+  Future<void> skipSpeech({
+    required String submissionId,
+    required String exerciseId,
+    required String sessionId,
+    required SkipReason reason,
+  }) =>
+      _inner.skipSpeech(
+        submissionId: submissionId,
+        exerciseId: exerciseId,
+        sessionId: sessionId,
+        reason: reason,
+      );
 
   @override
   Future<void> submitSpeech({

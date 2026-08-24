@@ -280,13 +280,8 @@ class LocalLearnerRepository implements LearnerRepository {
   }
 
   @override
-  Future<void> markBlockViewed(String lessonId, int blockIndex) async {
-    final existing = await _db.progressFor(lessonId);
-    if (existing?.state == 'completed') return; // never regress a completion
-    final furthest =
-        blockIndex > (existing?.furthestBlock ?? 0) ? blockIndex : existing!.furthestBlock;
-    await _db.upsertProgress(lessonId, 'in_progress', furthest);
-  }
+  Future<void> markBlockViewed(String lessonId, int blockIndex) =>
+      _db.markBlockViewed(lessonId, blockIndex);
 
   /// Mirrors learning.complete_lesson(): evidence-gated and idempotent.
   ///
@@ -310,14 +305,16 @@ class LocalLearnerRepository implements LearnerRepository {
     }
 
     final correct = (await _attempts.gradedExerciseIds());
+    // Only successful evidence — a skipped speech exercise is stored
+    // separately (see SpeechRepository.skipSpeech) and never lands here.
     final spoken = (await _speech.submittedExerciseIds());
+    final blocksViewed = (existing?.furthestBlock ?? 0) + 1;
 
-    final missing = <String>[
-      for (final id in rules.requiredCorrectExercises)
-        if (!correct.contains(id)) 'correct:$id',
-      for (final id in rules.requiredSpeechExercises)
-        if (!spoken.contains(id)) 'speech:$id',
-    ];
+    final missing = rules.missingFor(
+      correctExerciseIds: correct,
+      spokenExerciseIds: spoken,
+      blocksViewed: blocksViewed,
+    );
 
     if (missing.isNotEmpty) {
       return CompletionResult(

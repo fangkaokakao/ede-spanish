@@ -22,6 +22,103 @@ void main() {
     });
   });
 
+  group('CompletionRules.missingFor (centralized completion logic)', () {
+    const rules = CompletionRules(
+      requiredCorrectExercises: ['c1', 'c2'],
+      requiredSpeechExercises: ['s1'],
+      minBlocksViewed: 5,
+    );
+
+    test('a fresh lesson is missing every requirement', () {
+      final missing = rules.missingFor(
+        correctExerciseIds: const {},
+        spokenExerciseIds: const {},
+        blocksViewed: 0,
+      );
+      expect(missing, containsAll(<String>['correct:c1', 'correct:c2', 'speech:s1', 'blocks_viewed']));
+    });
+
+    test('minBlocksViewed is enforced, not just exercise evidence', () {
+      // Every exercise is done, but the learner has only reached block 3 of 5.
+      final missing = rules.missingFor(
+        correctExerciseIds: const {'c1', 'c2'},
+        spokenExerciseIds: const {'s1'},
+        blocksViewed: 3,
+      );
+      expect(missing, ['blocks_viewed']);
+    });
+
+    test('reaching exactly minBlocksViewed satisfies the reading requirement', () {
+      final missing = rules.missingFor(
+        correctExerciseIds: const {'c1', 'c2'},
+        spokenExerciseIds: const {'s1'},
+        blocksViewed: 5,
+      );
+      expect(missing, isEmpty);
+      expect(
+        rules.isSatisfiedBy(
+          correctExerciseIds: const {'c1', 'c2'},
+          spokenExerciseIds: const {'s1'},
+          blocksViewed: 5,
+        ),
+        isTrue,
+      );
+    });
+
+    test('a required speech exercise that was only skipped stays missing', () {
+      // A skip must never appear in spokenExerciseIds (see SpeechRepository).
+      final missing = rules.missingFor(
+        correctExerciseIds: const {'c1', 'c2'},
+        spokenExerciseIds: const {}, // s1 was skipped, not submitted
+        blocksViewed: 5,
+      );
+      expect(missing, ['speech:s1']);
+    });
+
+    test('an optional speech exercise being skipped never blocks completion', () {
+      const withOptionalSpeech = CompletionRules(
+        requiredCorrectExercises: ['c1'],
+        // s-optional is NOT required, so it never appears here.
+      );
+      final missing = withOptionalSpeech.missingFor(
+        correctExerciseIds: const {'c1'},
+        spokenExerciseIds: const {}, // s-optional skipped, no evidence at all
+        blocksViewed: 0,
+      );
+      expect(missing, isEmpty);
+    });
+  });
+
+  group('SkipReason', () {
+    test('every reason round-trips through its wire form', () {
+      for (final r in SkipReason.values) {
+        expect(SkipReasonX.parse(r.wire), r);
+      }
+    });
+
+    test('an unrecognised wire value defaults to learnerChoice, not a crash', () {
+      expect(SkipReasonX.parse('not-a-real-reason'), SkipReason.learnerChoice);
+    });
+  });
+
+  group('nextFurthestBlock', () {
+    test('a fresh lesson starts at 0', () {
+      expect(nextFurthestBlock(current: 0, reached: 0), 0);
+    });
+
+    test('reaching block index 0 is recorded', () {
+      expect(nextFurthestBlock(current: -1, reached: 0), 0);
+    });
+
+    test('reaching a later block advances the furthest index', () {
+      expect(nextFurthestBlock(current: 2, reached: 5), 5);
+    });
+
+    test('reaching a lower block afterward never regresses the saved index', () {
+      expect(nextFurthestBlock(current: 5, reached: 2), 5);
+    });
+  });
+
   group('DailyPlan', () {
     test('current is the first unfinished item', () {
       const p = DailyPlan(budgetMinutes: 15, items: [

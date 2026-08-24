@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import '../../domain/entities.dart';
 import '../../domain/repositories.dart';
 import '../local/app_database.dart';
 
@@ -63,6 +64,8 @@ class DeviceSpeechRepository implements SpeechRepository {
       sessionId: sessionId,
       audioPath: audioPath,
       durationMs: durationMs,
+      skipped: false,
+      skipReason: null,
       synced: false,
       createdAt: DateTime.now(),
     ));
@@ -71,6 +74,33 @@ class DeviceSpeechRepository implements SpeechRepository {
   @override
   Future<Set<String>> submittedExerciseIds() async =>
       (await _db.speechExerciseIds()).toSet();
+
+  /// Records why the speaking task was skipped. No audio, no duration, no
+  /// verdict — a skip is never speaking evidence and never satisfies a
+  /// required speech exercise (see AppDatabase.speechExerciseIds).
+  @override
+  Future<void> skipSpeech({
+    required String submissionId,
+    required String exerciseId,
+    required String sessionId,
+    required SkipReason reason,
+  }) async {
+    await _db.saveSpeech(SpeechRow(
+      submissionId: submissionId,
+      exerciseId: exerciseId,
+      sessionId: sessionId,
+      audioPath: null,
+      durationMs: null,
+      skipped: true,
+      skipReason: reason.wire,
+      synced: false,
+      createdAt: DateTime.now(),
+    ));
+  }
+
+  @override
+  Future<Set<String>> skippedExerciseIds() async =>
+      (await _db.skippedSpeechExerciseIds()).toSet();
 
   static Future<String> newRecordingPath() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -90,6 +120,8 @@ class FakeSpeechRepository implements SpeechRepository {
 
   final bool permission;
   final Set<String> _submitted = {};
+  final Set<String> _skipped = {};
+  final Map<String, SkipReason> skipReasons = {};
   bool recording = false;
   String? lastPlayed;
 
@@ -123,6 +155,20 @@ class FakeSpeechRepository implements SpeechRepository {
 
   @override
   Future<Set<String>> submittedExerciseIds() async => _submitted;
+
+  @override
+  Future<void> skipSpeech({
+    required String submissionId,
+    required String exerciseId,
+    required String sessionId,
+    required SkipReason reason,
+  }) async {
+    _skipped.add(exerciseId);
+    skipReasons[exerciseId] = reason;
+  }
+
+  @override
+  Future<Set<String>> skippedExerciseIds() async => _skipped;
 }
 
 /// Plays the bundled model audio for a lesson. Falls back silently when the
