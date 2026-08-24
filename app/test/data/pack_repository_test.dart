@@ -85,7 +85,7 @@ void main() {
 
   group('Why resolution (tier order)', () {
     test('tier 0 resolves the pre-authored answer from the pack', () async {
-      final a = await grammar.whyForBlock('b1');
+      final a = await grammar.whyForBlock('blk-l3-01');
       expect(a, isNotNull);
       expect(a!.source, 'pack');
       expect(a.depth, WhyDepth.l1Simple);
@@ -93,7 +93,7 @@ void main() {
     });
 
     test('a block with no authored answer returns null, not a guess', () async {
-      expect(await grammar.whyForBlock('b7'), isNull);
+      expect(await grammar.whyForBlock('blk-l3-07'), isNull);
     });
 
     test('deeper tiers walk L2 then L3, all from authored content', () async {
@@ -102,7 +102,8 @@ void main() {
       final l3 = await grammar.depth(concept, WhyDepth.l3Deep);
       expect(l2!.source, 'pack');
       expect(l3!.source, 'pack');
-      expect(l3.bodyTh.length, greaterThan(l2.bodyTh.length));
+      expect(l2.bodyTh, contains('hablo / hablas / habla'));
+      expect(l3.bodyTh, contains('imperfecto'));
       expect(l3.deeperAvailable, isFalse);
     });
 

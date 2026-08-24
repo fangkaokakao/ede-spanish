@@ -180,7 +180,7 @@ class EdeTextButton extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 6)],
-          Text(label),
+          Flexible(child: Text(label)),
         ],
       ),
     );

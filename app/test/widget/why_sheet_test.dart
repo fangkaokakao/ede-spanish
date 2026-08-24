@@ -13,7 +13,7 @@ void main() {
   testWidgets('opens with the pre-authored L1 answer, no network needed',
       (tester) async {
     await tester.pumpApp(
-      const WhySheet(blockId: 'b1', conceptId: conceptId),
+      const WhySheet(blockId: 'blk-l3-01', conceptId: conceptId),
       harness: h,
     );
 
@@ -24,7 +24,7 @@ void main() {
 
   testWidgets('progressive disclosure walks L1 -> L2 -> L3', (tester) async {
     await tester.pumpApp(
-      const WhySheet(blockId: 'b1', conceptId: conceptId),
+      const WhySheet(blockId: 'blk-l3-01', conceptId: conceptId),
       harness: h,
     );
 
@@ -42,7 +42,7 @@ void main() {
 
   testWidgets('the Spain usage note is shown at depth', (tester) async {
     await tester.pumpApp(
-      const WhySheet(blockId: 'b1', conceptId: conceptId),
+      const WhySheet(blockId: 'blk-l3-01', conceptId: conceptId),
       harness: h,
     );
     await tester.tap(find.text('ทำไมถึงเป็นแบบนี้'));
@@ -53,7 +53,7 @@ void main() {
   testWidgets('the AI tier is visibly labelled as not connected',
       (tester) async {
     await tester.pumpApp(
-      const WhySheet(blockId: 'b1', conceptId: conceptId),
+      const WhySheet(blockId: 'blk-l3-01', conceptId: conceptId),
       harness: h,
     );
 
@@ -67,9 +67,9 @@ void main() {
   testWidgets('a block with no authored answer shows an honest empty state',
       (tester) async {
     await tester.pumpApp(
-      const WhySheet(blockId: 'b7'),
+      const WhySheet(blockId: 'blk-l3-07'),
       harness: h,
     );
-    expect(find.textContaining('ยังไม่มีคำอธิบาย'), findsOneWidget);
+    expect(find.text('ยังไม่มีคำอธิบายสำหรับจุดนี้'), findsOneWidget);
   });
 }

@@ -1,3 +1,4 @@
+import 'package:ede/design_system/components.dart';
 import 'package:ede/features/lesson/exercise_view.dart';
 import 'package:ede/features/lesson/lesson_screen.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'harness.dart';
 
 const lessonId = '44444444-4444-4444-8444-444444444403';
+
+Future<void> revealInLesson(WidgetTester tester, Finder finder) async {
+  for (var i = 0; i < 20 && finder.evaluate().isEmpty; i++) {
+    final list = find.byType(ListView);
+    if (list.evaluate().isEmpty) break;
+    await tester.drag(list.first, const Offset(0, -280));
+    await tester.pumpAndSettle();
+  }
+  expect(finder, findsWidgets);
+  await tester.ensureVisible(finder.first);
+  await tester.pumpAndSettle();
+}
 
 void main() {
   late Harness h;
@@ -19,18 +32,20 @@ void main() {
 
       expect(find.text('บอกชื่อตัวเอง'), findsWidgets);
       expect(find.textContaining('เรียนจบบทนี้'), findsOneWidget);
-      expect(find.text('Me llamo Ana.'), findsOneWidget);
+      final spanish = tester.widget<SpanishLine>(find.byType(SpanishLine).first);
+      expect(spanish.es, 'Me llamo Ana.');
     });
 
     testWidgets('renders every authored block type', (tester) async {
       await tester.pumpApp(const LessonScreen(lessonId: lessonId), harness: h);
 
       // example
-      expect(find.text('Me llamo Ana.'), findsOneWidget);
+      final spanish = tester.widget<SpanishLine>(find.byType(SpanishLine).first);
+      expect(spanish.es, 'Me llamo Ana.');
       // pronunciation guide — the ll target, with its phonemic IPA
       expect(find.text('/ʝ/'), findsOneWidget);
       // comparison — vosotros is present as a first-class option
-      await tester.scrollUntilVisible(find.text('¿Cómo os llamáis?'), 300);
+      await revealInLesson(tester, find.text('¿Cómo os llamáis?'));
       expect(find.text('¿Cómo os llamáis?'), findsWidgets);
     });
 
@@ -76,7 +91,7 @@ void main() {
 
   group('exercise feedback', () {
     Future<void> answerTyped(WidgetTester tester, String text) async {
-      await tester.scrollUntilVisible(find.byType(TextField).first, 300);
+      await revealInLesson(tester, find.byType(TextField));
       await tester.enterText(find.byType(TextField).first, text);
       await tester.pumpAndSettle();
       await tester.tap(find.text('ตรวจคำตอบ').first);
@@ -127,7 +142,7 @@ void main() {
     testWidgets('the mcq marks the vosotros option correct', (tester) async {
       await tester.pumpApp(const LessonScreen(lessonId: lessonId), harness: h);
 
-      await tester.scrollUntilVisible(find.text('¿Cómo os llamáis?').last, 300);
+      await revealInLesson(tester, find.text('¿Cómo os llamáis?'));
       await tester.tap(find.text('¿Cómo os llamáis?').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('ตรวจคำตอบ').last);
@@ -140,8 +155,7 @@ void main() {
         (tester) async {
       await tester.pumpApp(const LessonScreen(lessonId: lessonId), harness: h);
 
-      await tester.scrollUntilVisible(
-          find.text('¿Cómo se llaman ustedes?').last, 300);
+      await revealInLesson(tester, find.text('¿Cómo se llaman ustedes?'));
       await tester.tap(find.text('¿Cómo se llaman ustedes?').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('ตรวจคำตอบ').last);
@@ -158,7 +172,7 @@ void main() {
     testWidgets('the check button is disabled until there is an answer',
         (tester) async {
       await tester.pumpApp(const LessonScreen(lessonId: lessonId), harness: h);
-      await tester.scrollUntilVisible(find.text('ตรวจคำตอบ').first, 300);
+      await revealInLesson(tester, find.text('ตรวจคำตอบ'));
 
       final button = tester.widget<FilledButton>(
           find.ancestor(

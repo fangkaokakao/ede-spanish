@@ -146,13 +146,16 @@ const Map<String, dynamic> kContentPack = {
             },
             'tokens': [
               {'t': 'Me', 'role': 'pronombre', 'th': 'ตัวฉัน'},
-              {'t': 'llamo', 'role': 'verbo', 'th': 'เรียก (ผู้พูดเป็นคนทำ)'},
+              {
+                't': 'llamo',
+                'role': 'verbo',
+                'th': 'เรียก (ผู้พูดเป็นคนทำ)',
+                'segments': [
+                  {'s': 'llam-', 'th': 'รากของ llamar “เรียก”'},
+                  {'s': '-o', 'th': 'รูปบุรุษที่ 1 เอกพจน์ในรูปนี้'},
+                ],
+              },
               {'t': 'Ana', 'role': 'nombre', 'th': 'ชื่อคน'},
-            ],
-            'segments': [
-              {'s': 'me', 'th': 'ตัวฉัน'},
-              {'s': 'llam', 'th': 'ราก “เรียก”'},
-              {'s': 'o', 'th': 'บอกว่าผู้พูดเป็นคนทำ (บุรุษที่ 1 เอกพจน์)'},
             ],
           },
         },
@@ -174,8 +177,9 @@ const Map<String, dynamic> kContentPack = {
             'note_th':
                 'll ในคำว่า llamo ออกเป็นเสียงเพดานคล้าย ย ไม่ใช่ ล — me llamo อ่านประมาณ เม-ยา-โม',
             'contrast_pair': {
-              'es': 'lamo / llamo',
-              'th': 'ถ้าออกเป็น ล จะกลายเป็นคำว่า lamo ซึ่งแปลว่า เลีย',
+              'a': 'lamo',
+              'b': 'llamo',
+              'note_th': 'ถ้าออกเป็น ล จะกลายเป็นคำว่า lamo ซึ่งแปลว่า เลีย',
             },
             'audio': {
               'normal': 'pre-a1/u1/llamo-word.m4a',
