@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -92,12 +94,27 @@ class _Gate extends ConsumerWidget {
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator(strokeWidth: 2.4)),
       ),
-      error: (e, _) => Scaffold(
-        body: EdeErrorState(
-          message: 'เปิดแอปไม่สำเร็จ กรุณาลองอีกครั้ง',
-          onRetry: () => ref.invalidate(preferencesProvider),
-        ),
-      ),
+      error: (e, st) {
+        // Diagnostic only: this is the app's cold-start gate, so a thrown
+        // error here has no other console surface — Riverpod hands it to
+        // this builder instead of letting it reach FlutterError/zone
+        // handlers. Logged unconditionally (not just in debug builds) so a
+        // deployed/release build's browser console still shows the real
+        // cause instead of only the Thai fallback message.
+        developer.log(
+          'EDE failed to start: preferencesProvider entered an error state.',
+          name: 'ede.startup',
+          error: e,
+          stackTrace: st,
+          level: 1000, // SEVERE, so it is not filtered out of the console
+        );
+        return Scaffold(
+          body: EdeErrorState(
+            message: 'เปิดแอปไม่สำเร็จ กรุณาลองอีกครั้ง',
+            onRetry: () => ref.invalidate(preferencesProvider),
+          ),
+        );
+      },
       data: (p) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!context.mounted) return;
