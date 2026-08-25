@@ -45,11 +45,18 @@ class UnitSummary {
     required this.subtitleTh,
     required this.level,
     required this.lessons,
+    required this.sortOrder,
   });
   final String id, slug, titleTh, subtitleTh;
   final String? titleEs;
   final Cefr level;
   final List<LessonSummary> lessons;
+
+  /// Explicit course position within its level. Units are never displayed or
+  /// walked in whatever order a query/pack happens to return them in — every
+  /// caller sorts by this field, so a unit inserted ahead of an existing one
+  /// (e.g. a Foundation unit before Unit 1) reorders correctly everywhere.
+  final int sortOrder;
 }
 
 class LessonSummary {

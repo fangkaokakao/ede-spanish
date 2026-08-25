@@ -1,13 +1,10 @@
-import 'dart:io';
-
 import 'package:just_audio/just_audio.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import '../../domain/entities.dart';
 import '../../domain/repositories.dart';
 import '../local/app_database.dart';
+import 'speech_paths/speech_paths.dart' as speech_paths;
 
 /// Recording, replay and retry. Nothing else.
 ///
@@ -102,11 +99,7 @@ class DeviceSpeechRepository implements SpeechRepository {
   Future<Set<String>> skippedExerciseIds() async =>
       (await _db.skippedSpeechExerciseIds()).toSet();
 
-  static Future<String> newRecordingPath() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final name = 'rec-${DateTime.now().millisecondsSinceEpoch}.m4a';
-    return p.join(dir.path, name);
-  }
+  static Future<String> newRecordingPath() => speech_paths.newRecordingPath();
 
   Future<void> dispose() async {
     await _recorder.dispose();
@@ -296,7 +289,6 @@ class ModelAudioPlayer {
       _player.playingStream.map((p) => p);
 }
 
-/// A recording file that exists on disk, used to decide whether replay/retry
-/// controls are enabled.
-bool recordingExists(String? path) =>
-    path != null && path.isNotEmpty && File(path).existsSync();
+/// A recording that exists (on-disk natively, or a live `blob:` reference on
+/// web), used to decide whether replay/retry controls are enabled.
+bool recordingExists(String? path) => speech_paths.recordingExists(path);

@@ -2,9 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/local/app_database.dart';
+import '../data/local/audio_cache_drift.dart';
 import '../data/repositories/local_repositories.dart';
 import '../data/repositories/speech_repository_impl.dart';
 import '../data/repositories/supabase_repositories.dart';
+import '../domain/audio/audio_cache.dart';
+import '../domain/audio/audio_resolver.dart';
+import '../domain/audio/tts_provider.dart';
 import '../domain/entities.dart';
 import '../domain/repositories.dart';
 import 'env.dart';
@@ -74,6 +78,30 @@ final learnerRepositoryProvider = Provider<LearnerRepository>((ref) {
 /// a provider so widget tests get a silent fake instead of a platform plugin.
 final modelAudioProvider =
     Provider<ModelAudioPlayer>((ref) => ModelAudioPlayer());
+
+/// Local metadata cache of previously-synthesized audio (Drift v3 table).
+final audioCacheProvider = Provider<AudioCache>(
+  (ref) => DriftAudioCache(ref.watch(databaseProvider)),
+);
+
+/// No TTS vendor and no client secret are configured in this build (item 9),
+/// so this always resolves as "not configured" and AudioResolver falls
+/// through to the honest unavailable state rather than fabricating audio.
+/// Swap in a real vendor here — nothing else in the audio layer changes.
+final ttsProviderProvider =
+    Provider<TtsProvider>((ref) => const UnconfiguredTtsProvider());
+
+/// App-wide audio resolution: human override > cache > TTS > honest
+/// unavailable (see domain/audio/audio_resolver.dart). Not yet consumed by
+/// ModelAudioPlayer/SpeakingView — those keep their existing direct-asset
+/// playback in this change to avoid touching the already-verified Step 4
+/// lesson flow; adopting this resolver in that call path is a follow-up.
+final audioResolverProvider = Provider<AudioResolver>(
+  (ref) => AudioResolver(
+    cache: ref.watch(audioCacheProvider),
+    tts: ref.watch(ttsProviderProvider),
+  ),
+);
 
 // -------------------------------------------------------------- curriculum --
 

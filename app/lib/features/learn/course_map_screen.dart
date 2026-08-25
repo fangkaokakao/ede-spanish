@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../data/local/content_pack.dart' show kAvailableLessonSlugs;
 import '../../design_system/components.dart';
 import '../../design_system/learning_widgets.dart';
 import '../../design_system/theme.dart';
@@ -61,11 +62,16 @@ class CourseMapScreen extends ConsumerWidget {
                       body: 'เนื้อหาระดับนี้ยังไม่ได้เผยแพร่')
                   : Column(
                       children: [
-                        for (final u in us)
+                        for (var i = 0; i < us.length; i++)
                           Padding(
                             padding: const EdgeInsets.only(bottom: EdeSpace.lg),
                             child: _UnitCard(
-                              unit: u,
+                              unit: us[i],
+                              // `us` is already sorted by UnitSummary.sortOrder
+                              // (see PackCurriculumRepository.unitsForLevel), so
+                              // this position is the real course order — never
+                              // hardcode "หน่วยที่ 1" for every card.
+                              position: i + 1,
                               progress: progress.valueOrNull ?? const {},
                             ),
                           ),
@@ -132,9 +138,10 @@ class _CefrJourney extends StatelessWidget {
 }
 
 class _UnitCard extends ConsumerWidget {
-  const _UnitCard({required this.unit, required this.progress});
+  const _UnitCard({required this.unit, required this.position, required this.progress});
 
   final UnitSummary unit;
+  final int position;
   final Map<String, LessonProgress> progress;
 
   @override
@@ -150,7 +157,7 @@ class _UnitCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GrammarLabel(parts: [unit.level.label, 'หน่วยที่ 1']),
+          GrammarLabel(parts: [unit.level.label, 'หน่วยที่ $position']),
           const SizedBox(height: 6),
           Text(unit.titleTh,
               style: EdeType.thaiTitle.copyWith(color: context.colors.onSurface)),
@@ -175,7 +182,7 @@ class _UnitCard extends ConsumerWidget {
               lesson: l,
               state: progress[l.id]?.state ?? LessonState.notStarted,
               // Only lessons the pack actually contains are enterable.
-              enterable: l.slug == 'pre-a1-u1-l3',
+              enterable: kAvailableLessonSlugs.contains(l.slug),
             ),
         ],
       ),

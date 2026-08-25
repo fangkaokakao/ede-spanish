@@ -42,13 +42,17 @@ class SupabaseCurriculumRepository implements CurriculumRepository {
     final rows = await _c
         .schema('content')
         .from('curriculum_nodes')
-        .select('id,slug,title_th,title_es,subtitle_th,level,'
+        .select('id,slug,title_th,title_es,subtitle_th,level,sort_order,'
             'lessons:lessons(id,slug,sort_order,estimated_minutes,'
             'lesson_versions(title_th,version))')
         .eq('kind', 'unit')
         .eq('level', level.wire)
         .order('sort_order');
-    return rows.map(_unit).toList();
+    // The query already orders by sort_order; sorting again client-side is
+    // defensive, not redundant — it is what keeps unit order correct even if
+    // a future caller passes in rows from something other than this query.
+    return rows.map(_unit).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
   @override
@@ -56,7 +60,7 @@ class SupabaseCurriculumRepository implements CurriculumRepository {
     final m = await _c
         .schema('content')
         .from('curriculum_nodes')
-        .select('id,slug,title_th,title_es,subtitle_th,level,'
+        .select('id,slug,title_th,title_es,subtitle_th,level,sort_order,'
             'lessons:lessons(id,slug,sort_order,estimated_minutes,'
             'lesson_versions(title_th,version))')
         .eq('id', unitId)
@@ -71,6 +75,7 @@ class SupabaseCurriculumRepository implements CurriculumRepository {
         titleEs: m['title_es'] as String?,
         subtitleTh: (m['subtitle_th'] as String?) ?? '',
         level: CefrX.parse(m['level'] as String),
+        sortOrder: (m['sort_order'] as int?) ?? 0,
         lessons: ((m['lessons'] as List?) ?? const [])
             .map((e) {
               final l = (e as Map).cast<String, dynamic>();
