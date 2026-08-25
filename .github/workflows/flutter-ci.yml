@@ -1,11 +1,5 @@
 name: Flutter CI
 
-# Sole purpose: put the Flutter vertical slice in front of a real compiler.
-# This workflow verifies the current Flutter app and also performs a real
-# Flutter Web build so PWA/web compatibility is checked in CI.
-#
-# This workflow does NOT build an APK/IPA, publish anything, or touch Supabase.
-
 on:
   push:
   pull_request:
@@ -19,12 +13,11 @@ permissions:
   contents: read
 
 env:
-  # Pinned Flutter version for reproducible CI.
   FLUTTER_VERSION: "3.32.0"
 
 jobs:
   verify:
-    name: pub get -> codegen -> analyze -> test -> build web
+    name: pub get -> codegen -> analyze -> test -> drift web -> build web
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -64,14 +57,14 @@ jobs:
         id: codegen
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Confirm the generated file exists
+      - name: Confirm generated Drift code exists
         shell: bash
         run: |
           if [ ! -f lib/data/local/app_database.g.dart ]; then
-            echo "::error::build_runner reported success but app_database.g.dart is missing."
-            echo "Analysis would be meaningless without it. Failing early."
+            echo "::error::build_runner succeeded but app_database.g.dart is missing."
             exit 1
           fi
+
           echo "Generated $(wc -l < lib/data/local/app_database.g.dart) lines."
 
       # ---- 4 ------------------------------------------------------------------
@@ -83,8 +76,163 @@ jobs:
         run: flutter test --reporter expanded --file-reporter json:test-results.json
 
       # ---- 6 ------------------------------------------------------------------
+      # Resolve the exact packages selected by flutter pub get.
+      - name: Resolve Drift and sqlite3 versions
+        id: drift_versions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          dart pub deps --json > /tmp/ede-pub-deps.json
+
+          DRIFT_VERSION="$(
+            jq -r '.packages[] | select(.name == "drift") | .version' \
+              /tmp/ede-pub-deps.json | head -n 1
+          )"
+
+          SQLITE3_VERSION="$(
+            jq -r '.packages[] | select(.name == "sqlite3") | .version' \
+              /tmp/ede-pub-deps.json | head -n 1
+          )"
+
+          if [ -z "$DRIFT_VERSION" ] || [ "$DRIFT_VERSION" = "null" ]; then
+            echo "::error::Could not resolve the installed drift version."
+            exit 1
+          fi
+
+          if [ -z "$SQLITE3_VERSION" ] || [ "$SQLITE3_VERSION" = "null" ]; then
+            echo "::error::Could not resolve the installed sqlite3 version."
+            exit 1
+          fi
+
+          echo "Resolved drift: $DRIFT_VERSION"
+          echo "Resolved sqlite3: $SQLITE3_VERSION"
+
+          echo "DRIFT_VERSION=$DRIFT_VERSION" >> "$GITHUB_ENV"
+          echo "SQLITE3_VERSION=$SQLITE3_VERSION" >> "$GITHUB_ENV"
+
+      # ---- 7 ------------------------------------------------------------------
+      # Download sqlite3.wasm from the SAME resolved Drift release.
+      # Do not copy a stale binary from another project/version.
+      - name: Download compatible sqlite3.wasm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Looking for sqlite3.wasm in drift-${DRIFT_VERSION}"
+
+          RELEASE_JSON="$(mktemp)"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --header "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/simolus3/drift/releases/tags/drift-${DRIFT_VERSION}" \
+            --output "$RELEASE_JSON"
+
+          WASM_URL="$(
+            jq -r '
+              .assets[]
+              | select(.name == "sqlite3.wasm")
+              | .browser_download_url
+            ' "$RELEASE_JSON" | head -n 1
+          )"
+
+          if [ -z "$WASM_URL" ] || [ "$WASM_URL" = "null" ]; then
+            echo "::error::The resolved drift-${DRIFT_VERSION} release does not expose sqlite3.wasm."
+            echo "::error::Resolved sqlite3 package version: ${SQLITE3_VERSION}"
+            exit 1
+          fi
+
+          curl \
+            --fail \
+            --show-error \
+            --location \
+            "$WASM_URL" \
+            --output web/sqlite3.wasm
+
+          if [ ! -s web/sqlite3.wasm ]; then
+            echo "::error::Downloaded web/sqlite3.wasm is missing or empty."
+            exit 1
+          fi
+
+          echo "Downloaded sqlite3.wasm:"
+          ls -lh web/sqlite3.wasm
+
+      # ---- 8 ------------------------------------------------------------------
+      # Compile the worker from source against the exact resolved Dart packages.
+      - name: Compile Drift web worker
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -f web/drift_worker.dart ]; then
+            echo "::error::web/drift_worker.dart is missing."
+            exit 1
+          fi
+
+          dart compile js \
+            -O4 \
+            --no-source-maps \
+            web/drift_worker.dart \
+            -o web/drift_worker.dart.js
+
+          if [ ! -s web/drift_worker.dart.js ]; then
+            echo "::error::Compiled drift worker is missing or empty."
+            exit 1
+          fi
+
+          echo "Compiled Drift worker:"
+          ls -lh web/drift_worker.dart.js
+
+      # ---- 9 ------------------------------------------------------------------
+      # Make sure production web connection asks for the same filenames.
+      - name: Verify Drift web connection asset names
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CONNECTION_FILE="lib/data/local/db_connection/db_connection_web.dart"
+
+          if ! grep -q "sqlite3.wasm" "$CONNECTION_FILE"; then
+            echo "::error::$CONNECTION_FILE does not reference sqlite3.wasm"
+            exit 1
+          fi
+
+          if ! grep -q "drift_worker.dart.js" "$CONNECTION_FILE"; then
+            echo "::error::$CONNECTION_FILE does not reference drift_worker.dart.js"
+            exit 1
+          fi
+
+          echo "Drift web connection references the expected runtime assets."
+
+      # ---- 10 -----------------------------------------------------------------
       - name: Build Flutter Web
         run: flutter build web
+
+      # ---- 11 -----------------------------------------------------------------
+      # flutter build web copies web/ runtime files into build/web.
+      # Fail CI if the deploy artifact is incomplete.
+      - name: Verify Drift runtime assets in build/web
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for file in sqlite3.wasm drift_worker.dart.js; do
+            if [ ! -s "build/web/$file" ]; then
+              echo "::error::build/web is missing $file or the file is empty."
+              exit 1
+            fi
+
+            echo "Verified build/web/$file"
+            ls -lh "build/web/$file"
+          done
+
+          echo "Drift Web runtime is complete."
+          echo "drift=$DRIFT_VERSION"
+          echo "sqlite3=$SQLITE3_VERSION"
 
       # ---- diagnostics --------------------------------------------------------
       - name: Upload failure diagnostics
@@ -95,6 +243,10 @@ jobs:
           path: |
             app/test-results.json
             app/lib/data/local/app_database.g.dart
+            app/pubspec.lock
+            app/web/drift_worker.dart
+            app/web/drift_worker.dart.js
+            app/web/sqlite3.wasm
           if-no-files-found: ignore
           retention-days: 14
 
@@ -115,20 +267,21 @@ jobs:
         shell: bash
         run: |
           parts=$(grep -rl "^part '" lib | wc -l)
+
           if [ "$parts" -gt 0 ] && ! grep -qE '^  build_runner:' pubspec.yaml; then
-            echo "::error::lib declares a 'part' directive but build_runner is not in dev_dependencies."
+            echo "::error::lib declares a part directive but build_runner is missing."
             exit 1
           fi
 
-      - name: No generated code committed
+      - name: No generated database code committed
         shell: bash
         run: |
           if find lib -name '*.g.dart' | grep -q .; then
-            echo "::error::A .g.dart file is committed. It will drift from its source."
+            echo "::error::A .g.dart file is committed."
             exit 1
           fi
 
-      - name: No asserted font paths without the font files
+      - name: No asserted font paths without font files
         shell: bash
         run: |
           active=$(grep -cE '^        - asset: assets/fonts/' pubspec.yaml || true)
@@ -172,7 +325,7 @@ jobs:
           patterns='(sbp_[a-zA-Z0-9]{20,}|sk-[a-zA-Z0-9]{20,}|eyJ[A-Za-z0-9_-]{30,}\.[A-Za-z0-9_-]{20,}|(service_role|serviceRole)[A-Za-z]*[[:space:]]*[:=][[:space:]]*.?[A-Za-z0-9_-]{16,})'
 
           if grep -rnE "$patterns" lib 2>/dev/null; then
-            echo "::error::possible hard-coded secret in app source (see matches above)."
+            echo "::error::possible hard-coded secret in app source."
             exit 1
           fi
 
