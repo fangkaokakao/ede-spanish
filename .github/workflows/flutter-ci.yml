@@ -114,12 +114,14 @@ jobs:
       # ---- 7 ------------------------------------------------------------------
       # Download sqlite3.wasm from the SAME resolved Drift release.
       # Do not copy a stale binary from another project/version.
+            # ---- 7 ------------------------------------------------------------------
+      # Download sqlite3.wasm from the exact resolved sqlite3 package release.
       - name: Download compatible sqlite3.wasm
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "Looking for sqlite3.wasm in drift-${DRIFT_VERSION}"
+          echo "Looking for sqlite3.wasm in sqlite3-${SQLITE3_VERSION}"
 
           RELEASE_JSON="$(mktemp)"
 
@@ -129,7 +131,7 @@ jobs:
             --show-error \
             --location \
             --header "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/simolus3/drift/releases/tags/drift-${DRIFT_VERSION}" \
+            "https://api.github.com/repos/simolus3/sqlite3.dart/releases/tags/sqlite3-${SQLITE3_VERSION}" \
             --output "$RELEASE_JSON"
 
           WASM_URL="$(
@@ -141,8 +143,7 @@ jobs:
           )"
 
           if [ -z "$WASM_URL" ] || [ "$WASM_URL" = "null" ]; then
-            echo "::error::The resolved drift-${DRIFT_VERSION} release does not expose sqlite3.wasm."
-            echo "::error::Resolved sqlite3 package version: ${SQLITE3_VERSION}"
+            echo "::error::sqlite3-${SQLITE3_VERSION} release does not expose sqlite3.wasm."
             exit 1
           fi
 
@@ -158,9 +159,8 @@ jobs:
             exit 1
           fi
 
-          echo "Downloaded sqlite3.wasm:"
+          echo "Downloaded sqlite3.wasm from sqlite3-${SQLITE3_VERSION}:"
           ls -lh web/sqlite3.wasm
-
       # ---- 8 ------------------------------------------------------------------
       # Compile the worker from source against the exact resolved Dart packages.
       - name: Compile Drift web worker
