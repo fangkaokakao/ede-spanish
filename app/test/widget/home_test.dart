@@ -26,7 +26,9 @@ void main() {
     await t.pumpApp(const HomeScreen(), harness: h);
     await t.pumpAndSettle();
 
-    expect(find.textContaining('บอกชื่อตัวเอง'), findsWidgets);
+    // Foundation 0 (สวัสดีแบบสเปน) is now the first lesson in learning order,
+    // ahead of Unit 1's "บอกชื่อตัวเอง" — see kUnitFoundation0Id sort_order 0.
+    expect(find.textContaining('สวัสดีแบบสเปน'), findsWidgets);
     expect(find.textContaining('นาที'), findsWidgets);
     expect(find.text('เรียนต่อ'), findsWidgets);
   });

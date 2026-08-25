@@ -32,7 +32,8 @@ class PackCurriculumRepository implements CurriculumRepository {
       (_pack['units'] as List)
           .map((e) => _unit((e as Map).cast<String, dynamic>()))
           .where((u) => u.level == level)
-          .toList();
+          .toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
   @override
   Future<UnitSummary> unit(String unitId) async {
@@ -50,6 +51,7 @@ class PackCurriculumRepository implements CurriculumRepository {
         titleEs: m['title_es'] as String?,
         subtitleTh: m['subtitle_th'] as String,
         level: CefrX.parse(m['level'] as String),
+        sortOrder: m['sort_order'] as int,
         lessons: (m['lessons'] as List).map((e) {
           final l = (e as Map).cast<String, dynamic>();
           return LessonSummary(

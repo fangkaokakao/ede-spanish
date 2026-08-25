@@ -1,11 +1,7 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../../domain/entities.dart' show nextFurthestBlock;
+import 'db_connection/db_connection.dart';
 
 part 'app_database.g.dart'; // run: dart run build_runner build
 
@@ -98,40 +94,88 @@ class Stats extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// Local metadata cache for resolved audio (see domain/audio/). Additive-only:
+/// storing bytes here is a cache of what a TtsProvider already returned, never
+/// itself a source of truth, and dropping the whole table would only cost a
+/// future re-synthesis, never any user data.
+@DataClassName('AudioCacheRow')
+class AudioCacheEntries extends Table {
+  /// AudioIdentity.cacheKey — deterministic, so this is a natural primary key.
+  TextColumn get cacheKey => text()();
+
+  /// AudioSource.wire of the resolution that was cached. In practice this is
+  /// always 'tts': see DriftAudioCache.store for why human overrides and
+  /// cache hits are never re-written here.
+  TextColumn get source => text()();
+  TextColumn get assetPath => text().nullable()();
+  BlobColumn get bytes => blob().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {cacheKey};
+}
+
 @DriftDatabase(
-  tables: [Preferences, LessonProgressRows, Attempts, SpeechAttempts, Stats],
+  tables: [
+    Preferences,
+    LessonProgressRows,
+    Attempts,
+    SpeechAttempts,
+    Stats,
+    AudioCacheEntries,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
-  /// On-disk database for the running app.
-  factory AppDatabase.file() {
-    return AppDatabase(
-      LazyDatabase(() async {
-        final dir = await getApplicationDocumentsDirectory();
-        return NativeDatabase.createInBackground(
-          File(p.join(dir.path, 'ede.sqlite')),
-        );
-      }),
-    );
-  }
+  /// On-disk (native) / OPFS-backed (web) database for the running app. Which
+  /// one it actually is gets picked at compile time — see
+  /// db_connection/db_connection.dart — so this class itself never imports
+  /// dart:io or a platform-specific drift backend directly.
+  factory AppDatabase.file() => AppDatabase(openConnection());
 
   /// In-memory database for widget and unit tests: no file system, no plugins.
-  factory AppDatabase.memory() => AppDatabase(NativeDatabase.memory());
+  factory AppDatabase.memory() => AppDatabase(openMemoryConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
+          // Each `if` is independent and additive, not `else if`: a learner
+          // upgrading straight from v1 must get BOTH the v2 columns and the
+          // v3 table in one pass, exactly as if they had stopped at v2 first.
           if (from < 2) {
             await m.addColumn(speechAttempts, speechAttempts.skipped);
             await m.addColumn(speechAttempts, speechAttempts.skipReason);
           }
+          if (from < 3) {
+            await m.createTable(audioCacheEntries);
+          }
         },
       );
+
+  // -------------------------------------------------------------- audio cache
+
+  Future<AudioCacheRow?> audioCacheEntry(String cacheKey) =>
+      (select(audioCacheEntries)..where((t) => t.cacheKey.equals(cacheKey)))
+          .getSingleOrNull();
+
+  Future<void> upsertAudioCacheEntry({
+    required String cacheKey,
+    required String source,
+    String? assetPath,
+    Uint8List? bytes,
+  }) =>
+      into(audioCacheEntries).insertOnConflictUpdate(AudioCacheRow(
+        cacheKey: cacheKey,
+        source: source,
+        assetPath: assetPath,
+        bytes: bytes,
+        createdAt: DateTime.now(),
+      ));
 
   // ------------------------------------------------------------ preferences --
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../data/local/content_pack.dart' show kAvailableLessonSlugs;
 import '../../design_system/components.dart';
 import '../../design_system/learning_widgets.dart';
 import '../../design_system/theme.dart';
@@ -84,7 +85,7 @@ class UnitScreen extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: EdeSpace.sm),
                   child: EdeCard(
-                    onTap: l.slug == 'pre-a1-u1-l3'
+                    onTap: kAvailableLessonSlugs.contains(l.slug)
                         ? () => context.push('/lesson/${l.id}')
                         : null,
                     child: Row(
@@ -94,7 +95,7 @@ class UnitScreen extends ConsumerWidget {
                           progress: progress[l.id]?.state == LessonState.completed
                               ? 1
                               : 0,
-                          locked: l.slug != 'pre-a1-u1-l3',
+                          locked: !kAvailableLessonSlugs.contains(l.slug),
                         ),
                         const SizedBox(width: EdeSpace.lg),
                         Expanded(
@@ -105,7 +106,7 @@ class UnitScreen extends ConsumerWidget {
                                   style: EdeType.thaiBody
                                       .copyWith(color: context.colors.onSurface)),
                               Text(
-                                  l.slug == 'pre-a1-u1-l3'
+                                  kAvailableLessonSlugs.contains(l.slug)
                                       ? '${l.estimatedMinutes} นาที'
                                       : 'เร็วๆ นี้',
                                   style: EdeType.thaiBodySmall

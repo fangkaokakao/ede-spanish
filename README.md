@@ -139,6 +139,62 @@ answer and owns every measurement; the dev mirror is not used.
 
 ---
 
+## Web / PWA
+
+The PWA-first priority (see `CLAUDE.md`) needed two things before `flutter
+build web` could even be attempted: a `web/` platform folder, and shared code
+that does not hard-fail when compiled for a browser.
+
+**Platform scaffold** — `app/web/index.html` and `app/web/manifest.json` now
+exist. `manifest.json` references `icons/Icon-*.png`, which are **not
+committed**: this environment has no image tool, and a fabricated placeholder
+icon would be worse than a missing one. A human with the real Spain-branded
+icon set needs to add them before the manifest is fully valid.
+
+**Code blockers fixed** — two files previously imported `dart:io` and
+`NativeDatabase`/`path_provider` unconditionally, which fails to compile for
+web:
+
+- `lib/data/local/app_database.dart` — opening the database is now behind a
+  conditional import (`lib/data/local/db_connection/`): native uses
+  `NativeDatabase` + `path_provider` as before, web uses
+  `package:drift/wasm.dart`'s `WasmDatabase.open`.
+- `lib/data/repositories/speech_repository_impl.dart` — recording-path and
+  "does this recording exist" logic is behind the same pattern
+  (`lib/data/repositories/speech_paths/`): native stats a real file, web
+  trusts the `blob:` URL `record`'s web implementation hands back (there is no
+  filesystem to check).
+
+Both conditionals check `dart.library.io` (native) then `dart.library.js_interop`
+(web) — the latter rather than the older `dart.library.html`, because
+`dart.library.html` is not available under Flutter's dart2wasm compile target
+and would silently fall through to the "unsupported" stub.
+
+**Not done, and not fabricated**: `sqlite3.wasm` and `drift_worker.js`, the two
+runtime files `WasmDatabase.open` needs alongside the built app. They must be
+generated from the *resolved* `sqlite3`/`drift` package versions (typically via
+`dart run drift_dev make-web-assets web/` after `flutter pub get`, package
+versions permitting) — committing a copy from a different environment would
+silently mismatch whatever this project actually resolves to. **`flutter build
+web` has not been run against this scaffold**: there is no Flutter SDK in the
+authoring sandbox that produced this change (same limitation the rest of this
+README already documents for `app/`). Verify it via `flutter-ci.yml`'s runner
+— see "Run Flutter CI" below — or on a machine with Flutter installed:
+
+```bash
+cd app
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter build web
+```
+
+A CI step that runs this on every push would need a change to
+`.github/workflows/flutter-ci.yml`, which the bot posting this PR cannot make
+(no `workflows` permission on its GitHub App installation) — a human needs to
+add it by hand.
+
+---
+
 ## Design direction
 
 **Azulejo** — the cobalt-and-white glazed tilework of Spain. Chosen against two
@@ -243,6 +299,15 @@ self-reference → Home → course map → Unit 1 → *Me llamo…* → audio co
 word/morphology sheet → ทำไม? → exercise → correction → retry → speaking →
 completion → progress → next recommendation.
 
+A second, real unit now precedes it: **Foundation 0 — *Hola, ¿qué tal?*** (course
+`sort_order: 0`, ahead of Unit 1's `sort_order: 1`), teaching the everyday
+greeting and *distinción* (`casa` /ˈkasa/ vs `caza` /ˈkaθa/) via the same
+schema-driven blocks and completion-rules contract as Unit 1 Lesson 3 — new
+UUIDs throughout, no existing id changed. `UnitSummary.sortOrder` is what makes
+the ordering explicit rather than incidental: both `PackCurriculumRepository`
+and `SupabaseCurriculumRepository` sort units by it rather than trusting
+insertion/query order.
+
 **The player is schema-driven.** `features/lesson/block_renderers.dart` is a
 `Map<String, BlockBuilder>`; the player walks `lesson.blocks` and looks each
 type up. It contains no reference to "Me llamo" or to any specific lesson, so a
@@ -262,9 +327,55 @@ is last, and when it is the stub it says so on screen.
 |---|---|
 | Pronunciation scoring | **Not implemented.** The UI records and says evaluation is unavailable. There is no percentage anywhere in the speaking screen, and a test asserts that. |
 | AI tutor | `LocalTutorStub`, labelled on screen. It only re-serves approved curriculum text and refuses questions it has no approved answer for. |
-| Audio playback | Assets are pre-generated at publish time; the bucket is empty, so the button says so instead of failing silently. |
+| Audio playback | Assets are pre-generated at publish time; the bucket is empty, so the button says so instead of failing silently. A provider-independent resolution layer exists (see "Audio layer" below) but is not yet wired into the lesson player's playback calls. |
 | Backend | Local in-memory adapters behind the same interfaces. Progress does not survive app restart, and Home says so. |
 | Placement test | Not built. Onboarding routes everyone to Pre-A1 and tells "เคยเรียนมาบ้าง" learners that plainly. |
+
+## Audio layer
+
+`lib/domain/audio/` is a provider-independent resolution layer, separate from
+(and not yet wired into) the direct-asset playback `ModelAudioPlayer` /
+`SpeakingView` / `AudioControls` already use for the Step 4 lesson flow —
+kept out of that call path deliberately in this change, to avoid touching the
+one flow that has been reviewed and preserved end to end.
+
+| Piece | Role |
+|---|---|
+| `AudioIdentity` | What is being asked for: Spanish text + `EdeVoiceProfile` + speed. Its `cacheKey` is a deterministic string, never `Object.hashCode` (not stable across runs). |
+| `EdeVoiceProfile` | A voice a TTS vendor could speak with. Asserts `locale == 'es-ES'` — this app cannot construct a profile for any other Spanish variety (SPAIN_SPANISH_LANGUAGE_GUARD). |
+| `AudioRequest` | An `AudioIdentity` plus an optional pre-recorded human override path, built from a block's existing `AudioRef` via `AudioRequest.forBlock`. |
+| `AudioResolution` | The outcome: a source, and either an asset path, in-memory bytes, or (when unavailable) a machine-readable reason — never a guess. |
+| `AudioSource` | `humanOverride` / `cache` / `tts` / `unavailable`. |
+| `TtsProvider` | Vendor interface. The only implementation wired up is `UnconfiguredTtsProvider`, which always returns "not configured" — **no TTS vendor and no client secret exist in this build.** |
+| `AudioCache` | Interface only; `DriftAudioCache` (in `data/local/`) is the implementation, backed by the new `audio_cache_entries` table. |
+| `AudioResolver` | Ties the above together. Precedence, always in this order: human override → cache → TTS → honestly unavailable. Never any other order, and an unavailable result is never cached. |
+
+Wired up in `providers.dart` as `audioResolverProvider`, backed by
+`audioCacheProvider` (Drift) and `ttsProviderProvider` (unconfigured). See
+`test/domain/audio_resolver_test.dart` for the precedence contract.
+
+### Local metadata cache (Drift v2 → v3)
+
+`AppDatabase.schemaVersion` moved from 2 to 3, adding one table
+(`audio_cache_entries`) — additive only, nothing existing changed shape. The
+migration guard is two independent `if` branches, not `else if`, so a learner
+upgrading straight from v1 gets both the v2 columns (`skipped`/`skip_reason`
+on `speech_attempts`) and the v3 table in a single upgrade, exactly as if they
+had stopped at v2 first:
+
+```dart
+onUpgrade: (m, from, to) async {
+  if (from < 2) { /* v2 columns */ }
+  if (from < 3) { await m.createTable(audioCacheEntries); }
+}
+```
+
+`test/data/app_database_migration_test.dart` builds a raw v1 schema and a raw
+v2 schema by hand (no Drift involved in constructing them) and opens each
+through the real `AppDatabase.migration`, asserting the v3 table exists after
+both — the thing that actually needs proving, not just that the code compiles.
+
+---
 
 ## Next
 

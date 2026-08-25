@@ -20,13 +20,29 @@
 ///   senses    : Map by sense id
 library;
 
-const String kPackVersion = 'pre-a1-u1.v1';
+const String kPackVersion = 'foundation0-pre-a1-u1.v1';
 const String kStyleGuideVersion = 'sg-0.2';
 
 /// Pre-A1 Unit 1 lesson 3. Ids match the SQL seed exactly so the same pack
-/// works against the real database.
+/// works against the real database. STABLE — never change these.
 const String kLessonMeLlamoId = '44444444-4444-4444-8444-444444444403';
 const String kUnitPreA1U1Id = '22222222-2222-4222-8222-222222222203';
+
+/// Foundation 0: the first unit a learner ever sees, one course-position
+/// ahead of Pre-A1 Unit 1 (sort_order 0 vs 1). New ids, a different suffix
+/// family from the seeded Unit 1 / Lesson 3 fixtures above, so nothing here
+/// collides with or renumbers a UUID something else already depends on.
+const String kUnitFoundation0Id = '22222222-2222-4222-8222-222222222200';
+const String kLessonFoundation0L1Id = '44444444-4444-4444-8444-444444444401';
+const String kLessonFoundation0L1Slug = 'foundation-0-l1';
+
+/// Lesson slugs with a real, content-complete pack entry. A unit can legally
+/// list a lesson stub that is not in here yet — QA-incomplete content is
+/// shown but never made to look tappable (see CourseMapScreen/UnitScreen).
+const Set<String> kAvailableLessonSlugs = {
+  'pre-a1-u1-l3',
+  kLessonFoundation0L1Slug,
+};
 
 const Map<String, dynamic> kContentPack = {
   'pack_version': kPackVersion,
@@ -84,9 +100,30 @@ const Map<String, dynamic> kContentPack = {
   // ------------------------------------------------------------------- units --
   'units': [
     {
+      'id': kUnitFoundation0Id,
+      'slug': 'foundation-0',
+      'level': 'pre_a1',
+      'sort_order': 0,
+      'title_th': 'ปูพื้นฐาน: เสียงและคำทักทายแรก',
+      'title_es': 'Fundamentos: sonidos y primeros saludos',
+      'subtitle_th':
+          'ก่อนเริ่มบทเรียนแรก ทำความรู้จักคำทักทายพื้นฐานและเสียง c/z แบบสเปน',
+      'lessons': [
+        {
+          'id': kLessonFoundation0L1Id,
+          'slug': kLessonFoundation0L1Slug,
+          'title_th': 'สวัสดีแบบสเปน',
+          'title_es': 'Hola, ¿qué tal?',
+          'sort_order': 1,
+          'estimated_minutes': 6,
+        },
+      ],
+    },
+    {
       'id': kUnitPreA1U1Id,
       'slug': 'pre-a1-u1',
       'level': 'pre_a1',
+      'sort_order': 1,
       'title_th': 'ทักทายและแนะนำตัว',
       'title_es': 'Saludos y presentaciones',
       'subtitle_th': 'เรียนจบหน่วยนี้ คุณจะทักทายและบอกชื่อตัวเองได้',
@@ -105,6 +142,115 @@ const Map<String, dynamic> kContentPack = {
 
   // ----------------------------------------------------------------- lessons --
   'lessons': {
+    kLessonFoundation0L1Id: {
+      'id': kLessonFoundation0L1Id,
+      'version_id': '55555555-5555-4555-8555-555555555501',
+      'slug': kLessonFoundation0L1Slug,
+      'title_th': 'สวัสดีแบบสเปน',
+      'title_es': 'Hola, ¿qué tal?',
+      'goal_th':
+          'เรียนจบบทนี้ คุณจะทักทายเป็นภาษาสเปนได้ และรู้จักเสียง c/z แบบสเปน (distinción)',
+      'estimated_minutes': 6,
+
+      'completion_rules': {
+        'required_correct_exercises': [
+          '66666666-6666-4666-8666-666666666604',
+          '66666666-6666-4666-8666-666666666605',
+        ],
+        'required_speech_exercises': ['66666666-6666-4666-8666-666666666606'],
+        'min_blocks_viewed': 6,
+      },
+
+      'blocks': [
+        {
+          'id': 'blk-l0-01',
+          'sort_order': 1,
+          'block_type': 'example',
+          'concept_id': null,
+          'why_l1_th':
+              '¡Hola! ¿Qué tal? เป็นคำทักทายที่ใช้ได้แทบทุกสถานการณ์และทุกช่วงเวลาของวัน ไม่ว่าจะเป็นทางการหรือไม่เป็นทางการ',
+          'payload': {
+            'es': '¡Hola! ¿Qué tal?',
+            'th': 'สวัสดี เป็นอย่างไรบ้าง',
+            'natural_note_th': 'เป็นคำทักทายที่คนสเปนใช้บ่อยที่สุดในชีวิตประจำวัน',
+            'audio': {
+              'normal': 'foundation-0/l1/hola-que-tal-normal.m4a',
+              'slow': 'foundation-0/l1/hola-que-tal-slow.m4a',
+            },
+            'tokens': [
+              {'t': 'Hola', 'role': 'interjección', 'th': 'สวัสดี'},
+              {'t': 'qué', 'role': 'pronombre', 'th': 'อะไร/อย่างไร'},
+              {'t': 'tal', 'role': 'adverbio', 'th': 'เป็นอย่างไร (สำนวน)'},
+            ],
+          },
+        },
+        {
+          'id': 'blk-l0-02',
+          'sort_order': 2,
+          'block_type': 'pronunciation_guide',
+          'concept_id': '11111111-1111-4111-8111-111111111105',
+          'why_l1_th':
+              'ในภาษาสเปนแบบสเปน (Spain Spanish) ตัวอักษร z และ c หน้าสระ e/i ออกเสียงเป็น th แบบภาษาอังกฤษ ไม่ใช่เสียง ส เหมือนในภาษาสเปนของละตินอเมริกาส่วนใหญ่ ลักษณะนี้เรียกว่า distinción',
+          // Course standard sg-0.2: distinción for /s/–/θ/. This is the
+          // headline phonological difference between Spain Spanish and most
+          // Latin American varieties (which use seseo, merging both to /s/).
+          'payload': {
+            'target_slug': 'c_z_distincion',
+            'focus': 'z',
+            'ipa_phonemic': 'θ',
+            'ipa_phonetic': 'θ',
+            'note_th':
+                'z และ c (หน้า e/i) ในสเปนออกเสียงโดยเอาปลายลิ้นแตะฟันบน คล้ายเสียง th ในคำภาษาอังกฤษ think ไม่ใช่เสียง ส',
+            'contrast_pair': {
+              'a': 'casa',
+              'b': 'caza',
+              'note_th':
+                  'casa (บ้าน) กับ caza (การล่าสัตว์) ออกเสียงเหมือนกันในสำเนียงที่ใช้ seseo แต่ในสเปนออกเสียงต่างกันชัดเจน: casa ใช้เสียง ส ส่วน caza ใช้เสียง th',
+            },
+            'audio': {
+              'normal': 'foundation-0/l1/casa-caza-normal.m4a',
+              'slow': 'foundation-0/l1/casa-caza-slow.m4a',
+            },
+          },
+        },
+        {
+          'id': 'blk-l0-03',
+          'sort_order': 3,
+          'block_type': 'exercise_embed',
+          'concept_id': null,
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666604'},
+        },
+        {
+          'id': 'blk-l0-04',
+          'sort_order': 4,
+          'block_type': 'exercise_embed',
+          'concept_id': null,
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666605'},
+        },
+        {
+          'id': 'blk-l0-05',
+          'sort_order': 5,
+          'block_type': 'exercise_embed',
+          'concept_id': null,
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666606'},
+        },
+        {
+          'id': 'blk-l0-06',
+          'sort_order': 6,
+          'block_type': 'review',
+          'concept_id': null,
+          'payload': {
+            'title_th': 'สรุปบทนี้',
+            'points_th': [
+              '¡Hola! ¿Qué tal? = คำทักทายที่ใช้ได้แทบทุกสถานการณ์',
+              'z และ c หน้า e/i ในสเปนออกเป็นเสียง th ไม่ใช่เสียง ส',
+              'casa (บ้าน) กับ caza (การล่าสัตว์) ออกเสียงต่างกันในสเปน',
+            ],
+            'th': 'ตอนนี้คุณทักทายเป็นภาษาสเปนได้ และแยกเสียง casa/caza แบบสเปนได้แล้ว',
+          },
+        },
+      ],
+    },
     kLessonMeLlamoId: {
       'id': kLessonMeLlamoId,
       'version_id': '55555555-5555-4555-8555-555555555503',
@@ -309,6 +455,22 @@ const Map<String, dynamic> kContentPack = {
   // Authored depths only. l4 is deliberately absent: it is the one tier that
   // may be generated at request time, and it must be labelled as generated.
   'concepts': {
+    '11111111-1111-4111-8111-111111111105': {
+      'id': '11111111-1111-4111-8111-111111111105',
+      'slug': 'c_z_distincion',
+      'name_th': 'ทำไม z และ c บางตัวออกเสียงเป็น th',
+      'name_es': 'La distinción',
+      'l1':
+          'ในภาษาสเปนแบบสเปน ตัวอักษร z ทุกตำแหน่ง และ c หน้าสระ e/i ออกเสียงเหมือน th ในภาษาอังกฤษ ไม่ใช่เสียง ส',
+      'l2':
+          'ปรากฏการณ์นี้เรียกว่า distinción เพราะแยกเสียง /θ/ (z, c หน้า e/i) ออกจากเสียง /s/ (s ทุกตำแหน่ง) อย่างชัดเจน เช่น caza /ˈkaθa/ (การล่าสัตว์) ต่างจาก casa /ˈkasa/ (บ้าน) ทั้งสองคำสะกดคนละแบบและออกเสียงคนละแบบ',
+      'l3':
+          'ข้อควรระวัง: distinción เป็นสำเนียงมาตรฐานในสเปนแผ่นดินใหญ่ส่วนใหญ่ (ยกเว้นบางพื้นที่ทางใต้ เช่น อันดาลูเซียบางส่วน) แต่ภาษาสเปนเกือบทั้งหมดในละตินอเมริกาใช้ seseo คือออกเสียง z และ c หน้า e/i เป็น /s/ เหมือนกันหมด ทำให้ casa และ caza ออกเสียงเหมือนกันในสำเนียงนั้น คอร์สนี้สอน distinción เพราะเป็นเป้าหมายการออกเสียงแบบสเปน (es-ES) ของคอร์ส',
+      'spain_note':
+          'เจ้าของภาษาในสเปนส่วนใหญ่ได้ยินว่า casa กับ caza เป็นคำที่ออกเสียงต่างกันชัดเจน การออกเสียงทั้งคู่เป็น ส เหมือนกันอาจฟังดูเป็นสำเนียงละตินอเมริกา',
+      'thai_contrast':
+          'ภาษาไทยไม่มีเสียง th แบบลิ้นแตะฟัน (dental fricative) แต่มีตำแหน่งลิ้นที่ใกล้เคียงในเสียง ท ที่ไม่มีลมออก ผู้เรียนไทยจึงมักออกเสียง z/c(e,i) เป็น ส หรือ ท ไปเลย ต้องฝึกให้ปลายลิ้นแตะฟันบนแทน',
+    },
     '11111111-1111-4111-8111-111111111101': {
       'id': '11111111-1111-4111-8111-111111111101',
       'slug': 'pronoun_drop',
@@ -343,6 +505,80 @@ const Map<String, dynamic> kContentPack = {
 
   // --------------------------------------------------------------- exercises --
   'exercises': {
+    '66666666-6666-4666-8666-666666666604': {
+      'id': '66666666-6666-4666-8666-666666666604',
+      'template_id': 'mcq',
+      'objective_id': '33333333-3333-4333-8333-333333333305',
+      'concept_id': null,
+      'prompt_th': 'เพื่อนชาวสเปนทักคุณว่า “¡Hola! ¿Qué tal?” คุณควรตอบว่าอย่างไร',
+      'payload': {
+        'stem': '¡Hola! ¿Qué tal?',
+        'options': [
+          'Bien, ¿y tú?',
+          'Sí, por favor',
+          'Lo siento',
+          'De nada',
+        ],
+      },
+      'answer_rules': {
+        'accepted': ['Bien, ¿y tú?'],
+        'accent_insensitive': true,
+        'error_codes': ['REG.GREETING'],
+      },
+      'feedback': {
+        'what_changed': 'Bien, ¿y tú?',
+        'why_th':
+            '¿Qué tal? เป็นคำถามทักทาย ไม่ใช่คำขอ จึงตอบด้วยการบอกว่าสบายดีแล้วถามกลับ ไม่ใช่ตอบรับคำขอหรือขอบคุณ',
+        'contrast': {'es': 'De nada.', 'th': 'ใช้ตอบเมื่อมีคนขอบคุณ ไม่ใช่ตอบคำทักทาย'},
+      },
+    },
+    '66666666-6666-4666-8666-666666666605': {
+      'id': '66666666-6666-4666-8666-666666666605',
+      'template_id': 'typed',
+      'objective_id': '33333333-3333-4333-8333-333333333306',
+      'concept_id': null,
+      'prompt_th': 'พิมพ์คำทักทายภาษาสเปนที่ใช้ได้ทุกช่วงเวลาของวัน (หนึ่งคำ)',
+      'payload': {
+        'stem': '____',
+        'th': 'คำทักทายที่ได้ยินในบล็อกแรกของบทนี้',
+      },
+      'answer_rules': {
+        'accepted': ['Hola'],
+        'accent_insensitive': true,
+        'error_codes': ['VOCAB.GREETING'],
+      },
+      'feedback': {
+        'what_changed': 'Hola',
+        'why_th': 'Hola ใช้ทักทายได้ทุกช่วงเวลาของวันและทุกระดับความเป็นทางการ',
+        'contrast': {'es': 'Buenos días.', 'th': 'ทักทายเฉพาะช่วงเช้าเท่านั้น'},
+      },
+    },
+    // scored_frame is what a recogniser would grade. This build has no ASR at
+    // all — see speaking_view.dart — so submitting only registers attempted
+    // evidence, never a verdict.
+    '66666666-6666-4666-8666-666666666606': {
+      'id': '66666666-6666-4666-8666-666666666606',
+      'template_id': 'repeat_speech',
+      'objective_id': '33333333-3333-4333-8333-333333333307',
+      'concept_id': '11111111-1111-4111-8111-111111111105',
+      'prompt_th': 'กดปุ่มไมค์แล้วพูดว่า “Gracias”',
+      'payload': {
+        'es': 'Gracias',
+        'th': 'ออกเสียง c ให้เป็นเสียง th แบบสเปน ปลายลิ้นแตะฟันบน',
+        'target_slug': 'c_z_distincion',
+        'focus': 'c',
+      },
+      'answer_rules': {
+        'frame_pattern': r'^gracias\b',
+        'min_confidence': 0.55,
+        'error_codes': ['PRON.C_Z_DISTINCION'],
+      },
+      'feedback': {
+        'what_changed': '',
+        'why_th': 'ถ้าออกเสียง c เป็น ส แทนที่จะเป็น th จะฟังดูเหมือนสำเนียงละตินอเมริกา ไม่ใช่ผิดความหมาย แต่ต่างจากเป้าหมายการออกเสียงของคอร์สนี้',
+        'contrast': {'es': 'casa / caza', 'th': 'บ้าน / การล่าสัตว์'},
+      },
+    },
     // Grades the FRAME, so any real name is accepted. Telling a learner to use
     // their own name and then only accepting one name would be wrong.
     '66666666-6666-4666-8666-666666666601': {

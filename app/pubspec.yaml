@@ -52,6 +52,13 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.24
   path_provider: ^2.1.4
   path: ^1.9.0
+  # Imported directly by the AppDatabase migration test (raw schema setup) and
+  # by drift's own native/wasm backends. Already resolved transitively via
+  # drift + sqlite3_flutter_libs; declared explicitly because it is imported
+  # directly. Left unconstrained above 2.1 so this never becomes the reason
+  # `flutter pub get`'s solver fails — the transitive requirement from drift
+  # is the one that actually pins the resolved version.
+  sqlite3: ">=2.1.0 <3.0.0"
 
   # Audio + recording. `record` captures the learner's voice; `just_audio` plays
   # the model audio and the learner's own take back for comparison.
