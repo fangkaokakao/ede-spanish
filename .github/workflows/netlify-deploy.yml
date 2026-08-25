@@ -45,8 +45,110 @@ jobs:
       - name: Flutter test
         run: flutter test
 
+      # Resolve the exact sqlite3 version selected by flutter pub get.
+      - name: Resolve sqlite3 version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          dart pub deps --json > /tmp/ede-pub-deps.json
+
+          SQLITE3_VERSION="$(
+            jq -r '.packages[] | select(.name == "sqlite3") | .version' \
+              /tmp/ede-pub-deps.json | head -n 1
+          )"
+
+          if [ -z "$SQLITE3_VERSION" ] || [ "$SQLITE3_VERSION" = "null" ]; then
+            echo "::error::Could not resolve sqlite3 version."
+            exit 1
+          fi
+
+          echo "Resolved sqlite3: $SQLITE3_VERSION"
+          echo "SQLITE3_VERSION=$SQLITE3_VERSION" >> "$GITHUB_ENV"
+
+      # Download sqlite3.wasm from the exact resolved sqlite3 release.
+      - name: Download sqlite3.wasm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Downloading sqlite3.wasm for sqlite3-${SQLITE3_VERSION}"
+
+          RELEASE_JSON="$(mktemp)"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --header "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/simolus3/sqlite3.dart/releases/tags/sqlite3-${SQLITE3_VERSION}" \
+            --output "$RELEASE_JSON"
+
+          WASM_URL="$(
+            jq -r '
+              .assets[]
+              | select(.name == "sqlite3.wasm")
+              | .browser_download_url
+            ' "$RELEASE_JSON" | head -n 1
+          )"
+
+          if [ -z "$WASM_URL" ] || [ "$WASM_URL" = "null" ]; then
+            echo "::error::sqlite3-${SQLITE3_VERSION} release does not expose sqlite3.wasm."
+            exit 1
+          fi
+
+          curl \
+            --fail \
+            --show-error \
+            --location \
+            "$WASM_URL" \
+            --output web/sqlite3.wasm
+
+          test -s web/sqlite3.wasm
+
+          echo "sqlite3.wasm ready:"
+          ls -lh web/sqlite3.wasm
+
+      # Compile Drift's worker against the resolved dependencies.
+      - name: Compile Drift web worker
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -f web/drift_worker.dart ]; then
+            echo "::error::web/drift_worker.dart is missing."
+            exit 1
+          fi
+
+          dart compile js \
+            -O4 \
+            --no-source-maps \
+            web/drift_worker.dart \
+            -o web/drift_worker.dart.js
+
+          test -s web/drift_worker.dart.js
+
+          echo "Drift worker ready:"
+          ls -lh web/drift_worker.dart.js
+
       - name: Build Flutter Web
         run: flutter build web
+
+      # Never deploy an incomplete Drift Web build.
+      - name: Verify Drift runtime assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for file in sqlite3.wasm drift_worker.dart.js; do
+            if [ ! -s "build/web/$file" ]; then
+              echo "::error::build/web is missing $file."
+              exit 1
+            fi
+
+            echo "Verified build/web/$file"
+          done
 
       - name: Install Netlify CLI
         working-directory: .
