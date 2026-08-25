@@ -170,23 +170,40 @@ Both conditionals check `dart.library.io` (native) then `dart.library.js_interop
 `dart.library.html` is not available under Flutter's dart2wasm compile target
 and would silently fall through to the "unsupported" stub.
 
-**Not done, and not fabricated**: `sqlite3.wasm` and `drift_worker.js`, the two
-runtime files `WasmDatabase.open` needs alongside the built app. They must be
-generated from the *resolved* `sqlite3`/`drift` package versions (typically via
-`dart run drift_dev make-web-assets web/` after `flutter pub get`, package
-versions permitting) — committing a copy from a different environment would
-silently mismatch whatever this project actually resolves to. **`flutter build
-web` has not been run against this scaffold**: there is no Flutter SDK in the
-authoring sandbox that produced this change (same limitation the rest of this
-README already documents for `app/`). Verify it via `flutter-ci.yml`'s runner
-— see "Run Flutter CI" below — or on a machine with Flutter installed:
+**Not done, and not fabricated**: `sqlite3.wasm` and `drift_worker.dart.js`,
+the two runtime files `WasmDatabase.open` needs alongside the built app
+(`lib/data/local/db_connection/db_connection_web.dart`). There is no
+`drift_dev make-web-assets` command — that does not exist in `drift_dev`.
+The real two-step setup, both keyed to the exact `sqlite3`/`drift` versions
+this project resolves to (`flutter pub get` writes `app/pubspec.lock`, which
+is intentionally not committed, since a stale copy from a different
+environment would silently mismatch):
 
 ```bash
 cd app
-flutter pub get
+flutter pub get   # resolves and writes app/pubspec.lock — read the exact
+                   # `sqlite3:` and `drift:` versions from it before step 1
+
+# 1. sqlite3.wasm — a prebuilt binary matching the resolved `sqlite3` pub
+#    package version. The `sqlite3` package publishes it as a release asset
+#    for its own version tag; find and copy the one matching the version
+#    pinned in pubspec.lock into web/. Do not reuse a wasm binary built
+#    against a different `sqlite3` version.
+
+# 2. drift_worker.dart.js — compiled from the committed worker entrypoint,
+#    web/drift_worker.dart, against the resolved `drift` version:
+dart compile js -O4 -o web/drift_worker.dart.js web/drift_worker.dart
+
 dart run build_runner build --delete-conflicting-outputs
 flutter build web
 ```
+
+**`flutter build web` has not been run against this scaffold**: there is no
+Flutter SDK in the authoring sandbox that produced this change (same
+limitation the rest of this README already documents for `app/`), so the
+exact pub-cache path for step 1 above could not be resolved or verified
+either. Verify it via `flutter-ci.yml`'s runner — see "Run Flutter CI" below
+— or on a machine with Flutter installed.
 
 A CI step that runs this on every push would need a change to
 `.github/workflows/flutter-ci.yml`, which the bot posting this PR cannot make

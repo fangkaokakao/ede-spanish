@@ -1,14 +1,34 @@
+import 'dart:developer';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/env.dart';
+import 'app/providers.dart';
 import 'app/router.dart';
+import 'data/local/app_database.dart';
 import 'design_system/theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Surfaces the real exception + stack trace on the browser/device console
+  // for any error that never reaches a widget's AsyncValue.when(error: ...)
+  // builder. Chains to the previous handler rather than replacing it.
+  final previousOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    log('EDE failed to start: ${details.exceptionAsString()}',
+        name: 'ede.startup', level: 1000, error: details.exception, stackTrace: details.stack);
+    previousOnError?.call(details);
+  };
+  final previousPlatformOnError = PlatformDispatcher.instance.onError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    log('EDE failed to start: $error', name: 'ede.startup', level: 1000, error: error, stackTrace: stack);
+    return previousPlatformOnError?.call(error, stack) ?? false;
+  };
 
   // Supabase is initialised only when configured. With no --dart-define the app
   // runs entirely on the embedded pack, which is how the slice is evaluated
@@ -20,7 +40,12 @@ Future<void> main() async {
     );
   }
 
-  runApp(const ProviderScope(child: EdeApp()));
+  final db = AppDatabase.file();
+
+  runApp(ProviderScope(
+    overrides: productionOverrides(db),
+    child: const EdeApp(),
+  ));
 }
 
 class EdeApp extends ConsumerWidget {

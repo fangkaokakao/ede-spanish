@@ -26,6 +26,17 @@ final databaseProvider = Provider<AppDatabase>(
   (_) => throw UnimplementedError('override databaseProvider in main() or tests'),
 );
 
+/// The override main() must install: opens the real (native file / web WASM)
+/// database and closes it when the ProviderScope holding this override is
+/// disposed. `overrideWith` rather than `overrideWithValue` because only the
+/// former exposes `ref.onDispose` for that cleanup.
+List<Override> productionOverrides(AppDatabase db) => [
+      databaseProvider.overrideWith((ref) {
+        ref.onDispose(db.close);
+        return db;
+      }),
+    ];
+
 // ------------------------------------------------------------- repositories --
 
 /// The pack is the read model in BOTH modes: published curriculum is served as
