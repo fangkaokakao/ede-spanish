@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -92,12 +94,16 @@ class _Gate extends ConsumerWidget {
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator(strokeWidth: 2.4)),
       ),
-      error: (e, _) => Scaffold(
-        body: EdeErrorState(
-          message: 'เปิดแอปไม่สำเร็จ กรุณาลองอีกครั้ง',
-          onRetry: () => ref.invalidate(preferencesProvider),
-        ),
-      ),
+      error: (e, st) {
+        log('EDE failed to start: preferencesProvider entered an error state.',
+            name: 'ede.startup', level: 1000, error: e, stackTrace: st);
+        return Scaffold(
+          body: EdeErrorState(
+            message: 'เปิดแอปไม่สำเร็จ กรุณาลองอีกครั้ง',
+            onRetry: () => ref.invalidate(preferencesProvider),
+          ),
+        );
+      },
       data: (p) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!context.mounted) return;

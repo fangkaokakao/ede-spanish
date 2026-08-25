@@ -3,16 +3,17 @@ import 'package:drift/wasm.dart';
 
 /// Browser: SQLite compiled to WebAssembly, run inside a worker so query work
 /// never blocks the main/UI thread. Requires two runtime files served
-/// alongside the app — `sqlite3.wasm` and `drift_worker.js` — that must be
-/// generated from the *resolved* `sqlite3`/`drift` package versions (see
-/// README "Web / PWA"); they are deliberately not committed here, since a
-/// stale copy from a different environment would silently mismatch the
-/// dependency versions this app actually resolves to.
+/// alongside the app — `sqlite3.wasm` and `drift_worker.dart.js` (the compiled
+/// output of `web/drift_worker.dart`) — that must be generated from the
+/// *resolved* `sqlite3`/`drift` package versions (see README "Web / PWA");
+/// they are deliberately not committed here, since a stale copy from a
+/// different environment would silently mismatch the dependency versions
+/// this app actually resolves to.
 QueryExecutor openConnection() => LazyDatabase(() async {
       final result = await WasmDatabase.open(
         databaseName: 'ede',
         sqlite3Uri: Uri.parse('sqlite3.wasm'),
-        driftWorkerUri: Uri.parse('drift_worker.js'),
+        driftWorkerUri: Uri.parse('drift_worker.dart.js'),
       );
       return result.resolvedExecutor;
     });
@@ -25,7 +26,7 @@ QueryExecutor openMemoryConnection() => LazyDatabase(() async {
       final result = await WasmDatabase.open(
         databaseName: ':memory:',
         sqlite3Uri: Uri.parse('sqlite3.wasm'),
-        driftWorkerUri: Uri.parse('drift_worker.js'),
+        driftWorkerUri: Uri.parse('drift_worker.dart.js'),
       );
       return result.resolvedExecutor;
     });
