@@ -36,11 +36,20 @@ const String kUnitFoundation0Id = '22222222-2222-4222-8222-222222222200';
 const String kLessonFoundation0L1Id = '44444444-4444-4444-8444-444444444401';
 const String kLessonFoundation0L1Slug = 'foundation-0-l1';
 
+/// Foundation 0, Lesson 0: the opening sound-and-reading lesson (Spanish
+/// alphabet + the five vowels), one course-position ahead of the existing
+/// "Hola, ¿qué tal?" lesson (sort_order 0 vs 1 within the unit — see
+/// kLessonFoundation0L1Id above, which keeps its own sort_order and id
+/// untouched). New id, same suffix family as the rest of Foundation 0.
+const String kLessonFoundation0L0Id = '44444444-4444-4444-8444-444444444400';
+const String kLessonFoundation0L0Slug = 'foundation-0-l0';
+
 /// Lesson slugs with a real, content-complete pack entry. A unit can legally
 /// list a lesson stub that is not in here yet — QA-incomplete content is
 /// shown but never made to look tappable (see CourseMapScreen/UnitScreen).
 const Set<String> kAvailableLessonSlugs = {
   'pre-a1-u1-l3',
+  kLessonFoundation0L0Slug,
   kLessonFoundation0L1Slug,
 };
 
@@ -107,8 +116,17 @@ const Map<String, dynamic> kContentPack = {
       'title_th': 'ปูพื้นฐาน: เสียงและคำทักทายแรก',
       'title_es': 'Fundamentos: sonidos y primeros saludos',
       'subtitle_th':
-          'ก่อนเริ่มบทเรียนแรก ทำความรู้จักคำทักทายพื้นฐานและเสียง c/z แบบสเปน',
+          'ก่อนเริ่มบทเรียนแรก ทำความรู้จักตัวอักษร เสียงสระ คำทักทายพื้นฐาน '
+          'และเสียง c/z แบบสเปน',
       'lessons': [
+        {
+          'id': kLessonFoundation0L0Id,
+          'slug': kLessonFoundation0L0Slug,
+          'title_th': 'ตัวอักษรและเสียงสระภาษาสเปน',
+          'title_es': 'El alfabeto y las vocales',
+          'sort_order': 0,
+          'estimated_minutes': 8,
+        },
         {
           'id': kLessonFoundation0L1Id,
           'slug': kLessonFoundation0L1Slug,
@@ -142,6 +160,230 @@ const Map<String, dynamic> kContentPack = {
 
   // ----------------------------------------------------------------- lessons --
   'lessons': {
+    kLessonFoundation0L0Id: {
+      'id': kLessonFoundation0L0Id,
+      'version_id': '55555555-5555-4555-8555-555555555500',
+      'slug': kLessonFoundation0L0Slug,
+      'title_th': 'ตัวอักษรและเสียงสระภาษาสเปน',
+      'title_es': 'El alfabeto y las vocales',
+      'goal_th':
+          'เรียนจบบทนี้ คุณจะรู้จักตัวอักษรภาษาสเปนทั้งหมด และออกเสียงสระ 5 ตัว '
+          '(a e i o u) ได้สั้น ชัด และคงที่แบบสเปน',
+      'estimated_minutes': 8,
+
+      'completion_rules': {
+        'required_correct_exercises': [
+          '66666666-6666-4666-8666-666666666610',
+          '66666666-6666-4666-8666-666666666611',
+          '66666666-6666-4666-8666-666666666612',
+          '66666666-6666-4666-8666-666666666613',
+        ],
+        'required_speech_exercises': ['66666666-6666-4666-8666-666666666614'],
+        'min_blocks_viewed': 14,
+      },
+
+      'blocks': [
+        {
+          'id': 'blk-l0a-01',
+          'sort_order': 1,
+          'block_type': 'heading',
+          'concept_id': null,
+          'payload': {'th': 'ก่อนเริ่มภาษาสเปนจริง: เสียงและการอ่าน'},
+        },
+        {
+          'id': 'blk-l0a-02',
+          'sort_order': 2,
+          'block_type': 'explanation',
+          'concept_id': '11111111-1111-4111-8111-111111111106',
+          'why_l1_th':
+              'ถ้าออกเสียงตัวอักษรผิดตั้งแต่ต้น จะติดนิสัยและแก้ยากในบทเรียนหลังๆ '
+              'จึงปูพื้นเสียงและการอ่านให้แม่นก่อน แล้วค่อยเข้าเนื้อหาไวยากรณ์และบทสนทนาจริง',
+          'payload': {
+            'title_th': 'ทำไมต้องเรียนเสียงก่อน',
+            'th':
+                'ฉันกำลังเรียนเสียงและการอ่านก่อนเริ่มภาษาสเปนจริง — บทเรียนชุด '
+                '"ปูพื้นฐาน" นี้ไม่ได้สอนไวยากรณ์หรือบทสนทนา แต่ฝึกให้หูจับเสียงสเปนได้ '
+                'ปากออกเสียงได้ถูกต้อง และตาอ่านตัวอักษรสเปนออกอย่างมั่นใจ ก่อนที่จะเริ่มบทเรียนที่ใช้เสียงเหล่านี้จริงๆ',
+          },
+        },
+        {
+          'id': 'blk-l0a-03',
+          'sort_order': 3,
+          'block_type': 'explanation',
+          'concept_id': null,
+          'why_l1_th':
+              'ตั้งแต่ปี 2010 ราชบัณฑิตยสถานสเปน (RAE) ไม่นับ ch และ ll เป็นตัวอักษรแยกอีกต่อไป '
+              'แต่ยังคงเขียนและออกเสียงเหมือนเดิมทุกประการ จึงยังต้องรู้จักไว้',
+          'payload': {
+            'title_th': 'ตัวอักษรภาษาสเปน 27 ตัว',
+            'th':
+                'a (a) · b (be) · c (ce) · d (de) · e (e) · f (efe) · g (ge) · '
+                'h (hache) · i (i) · j (jota) · k (ka) · l (ele) · m (eme) · '
+                'n (ene) · ñ (eñe) · o (o) · p (pe) · q (cu) · r (erre) · '
+                's (ese) · t (te) · u (u) · v (uve) · w (uve doble) · '
+                'x (equis) · y (i griega / ye) · z (zeta)\n\n'
+                'ตัวอักษรเดียวที่มีเฉพาะในภาษาสเปนคือ ñ (eñe) ส่วน ch และ ll เป็น '
+                'digraph (สองตัวรวมเป็นหนึ่งเสียง) ที่จะได้เรียนในบทถัดไป',
+          },
+        },
+        {
+          'id': 'blk-l0a-04',
+          'sort_order': 4,
+          'block_type': 'pronunciation_guide',
+          'concept_id': null,
+          'why_l1_th':
+              'สระ a ในภาษาสเปนอ้าปากกว้างและออกเสียงสั้นคงที่เสมอ ไม่ว่าจะอยู่ตำแหน่งไหนของคำ',
+          'payload': {
+            'target_slug': 'vowel_a',
+            'focus': 'a',
+            'ipa_phonemic': 'a',
+            'note_th':
+                'อ้าปากกว้าง ลิ้นอยู่ต่ำและกลางปาก ออกเสียงสั้นและคงที่ '
+                'ไม่ลากยาวหรือเปลี่ยนเสียงกลางคำเหมือนสระในภาษาอังกฤษบางคำ',
+            'thai_helper_th': 'อา',
+            'example': {'es': 'casa', 'th': 'บ้าน'},
+            'syllables': ['ca', 'sa'],
+            'audio': {
+              'normal': 'foundation-0/l0/vowel-a-normal.m4a',
+              'slow': 'foundation-0/l0/vowel-a-slow.m4a',
+            },
+          },
+        },
+        {
+          'id': 'blk-l0a-05',
+          'sort_order': 5,
+          'block_type': 'pronunciation_guide',
+          'concept_id': null,
+          'why_l1_th':
+              'สระ e ในภาษาสเปนออกเสียงสั้นและคงที่ ต่างจาก e ในหลายคำภาษาอังกฤษที่มักลดรูปเป็นเสียงเบา (schwa)',
+          'payload': {
+            'target_slug': 'vowel_e',
+            'focus': 'e',
+            'ipa_phonemic': 'e',
+            'note_th':
+                'อ้าปากแคบกว่า a เล็กน้อย มุมปากยกขึ้นทั้งสองข้าง ออกเสียงสั้นและคงที่ ไม่เพี้ยนเป็นเสียง แอ หรือ เออ',
+            'thai_helper_th': 'เอ',
+            'example': {'es': 'este', 'th': 'อันนี้'},
+            'syllables': ['es', 'te'],
+            'audio': {
+              'normal': 'foundation-0/l0/vowel-e-normal.m4a',
+              'slow': 'foundation-0/l0/vowel-e-slow.m4a',
+            },
+          },
+        },
+        {
+          'id': 'blk-l0a-06',
+          'sort_order': 6,
+          'block_type': 'pronunciation_guide',
+          'concept_id': null,
+          'why_l1_th': 'สระ i เป็นเสียงสั้นและแหลมที่สุดในกลุ่มสระสเปน',
+          'payload': {
+            'target_slug': 'vowel_i',
+            'focus': 'i',
+            'ipa_phonemic': 'i',
+            'note_th': 'ยิ้มเล็กน้อย ลิ้นอยู่สูงและหน้า ออกเสียงสั้น ไม่ลากยาวแบบ อี ในภาษาไทยเวลาเน้นคำ',
+            'thai_helper_th': 'อี',
+            'example': {'es': 'sí', 'th': 'ใช่'},
+            'syllables': [],
+            'audio': {
+              'normal': 'foundation-0/l0/vowel-i-normal.m4a',
+              'slow': 'foundation-0/l0/vowel-i-slow.m4a',
+            },
+          },
+        },
+        {
+          'id': 'blk-l0a-07',
+          'sort_order': 7,
+          'block_type': 'pronunciation_guide',
+          'concept_id': null,
+          'why_l1_th': 'สระ o อยู่กึ่งกลางระหว่างปากกลมสนิทกับปากแบน และไม่เปลี่ยนเป็นเสียง โอว แบบภาษาอังกฤษ',
+          'payload': {
+            'target_slug': 'vowel_o',
+            'focus': 'o',
+            'ipa_phonemic': 'o',
+            'note_th':
+                'ห่อริมฝีปากเป็นวงกลมพอประมาณ ออกเสียงสั้นและคงที่ตลอดคำ ไม่เลื่อนไปเป็นเสียงสระประสม โอว เหมือนคำว่า "go" ในภาษาอังกฤษ',
+            'thai_helper_th': 'โอ',
+            'example': {'es': 'no', 'th': 'ไม่'},
+            'syllables': [],
+            'audio': {
+              'normal': 'foundation-0/l0/vowel-o-normal.m4a',
+              'slow': 'foundation-0/l0/vowel-o-slow.m4a',
+            },
+          },
+        },
+        {
+          'id': 'blk-l0a-08',
+          'sort_order': 8,
+          'block_type': 'pronunciation_guide',
+          'concept_id': null,
+          'why_l1_th': 'สระ u ห่อริมฝีปากแคบและกลมที่สุดในกลุ่มสระสเปน',
+          'payload': {
+            'target_slug': 'vowel_u',
+            'focus': 'u',
+            'ipa_phonemic': 'u',
+            'note_th': 'ห่อริมฝีปากให้กลมและแคบ ลิ้นอยู่สูงและหลัง ออกเสียงสั้นและคงที่',
+            'thai_helper_th': 'อู',
+            'example': {'es': 'uno', 'th': 'หนึ่ง'},
+            'syllables': ['u', 'no'],
+            'audio': {
+              'normal': 'foundation-0/l0/vowel-u-normal.m4a',
+              'slow': 'foundation-0/l0/vowel-u-slow.m4a',
+            },
+          },
+        },
+        {
+          'id': 'blk-l0a-09',
+          'sort_order': 9,
+          'block_type': 'exercise_embed',
+          'concept_id': null,
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666610'},
+        },
+        {
+          'id': 'blk-l0a-10',
+          'sort_order': 10,
+          'block_type': 'exercise_embed',
+          'concept_id': null,
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666611'},
+        },
+        {
+          'id': 'blk-l0a-11',
+          'sort_order': 11,
+          'block_type': 'exercise_embed',
+          'concept_id': null,
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666612'},
+        },
+        {
+          'id': 'blk-l0a-12',
+          'sort_order': 12,
+          'block_type': 'exercise_embed',
+          'concept_id': null,
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666613'},
+        },
+        {
+          'id': 'blk-l0a-13',
+          'sort_order': 13,
+          'block_type': 'exercise_embed',
+          'concept_id': null,
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666614'},
+        },
+        {
+          'id': 'blk-l0a-14',
+          'sort_order': 14,
+          'block_type': 'review',
+          'concept_id': null,
+          'payload': {
+            'title_th': 'สรุปบทนี้',
+            'points_th': [
+              'ตัวอักษรภาษาสเปนมี 27 ตัว รวม ñ ที่ไม่มีในภาษาอังกฤษ',
+              'สระสเปนมี 5 เสียง (a e i o u) และออกเสียงสั้น ชัด คงที่เสมอ ไม่ลดรูปหรือลากเสียง',
+              'เสียงสระไทย (อา เอ อี โอ อู) ใกล้เคียงเสียงสระสเปนพอเป็นสะพานได้ แต่ไม่เหมือนกันทุกประการ',
+            ],
+            'th': 'ตอนนี้คุณรู้จักตัวอักษรสเปนและออกเสียงสระทั้ง 5 ตัวได้แล้ว',
+          },
+        },
+      ],
+    },
     kLessonFoundation0L1Id: {
       'id': kLessonFoundation0L1Id,
       'version_id': '55555555-5555-4555-8555-555555555501',
@@ -455,6 +697,21 @@ const Map<String, dynamic> kContentPack = {
   // Authored depths only. l4 is deliberately absent: it is the one tier that
   // may be generated at request time, and it must be labelled as generated.
   'concepts': {
+    '11111111-1111-4111-8111-111111111106': {
+      'id': '11111111-1111-4111-8111-111111111106',
+      'slug': 'vowels_pure',
+      'name_th': 'ทำไมสระสเปนไม่ลากเสียงหรือเปลี่ยนเสียงกลางคำ',
+      'name_es': 'La pureza vocálica',
+      'l1':
+          'ภาษาสเปนมีสระแค่ 5 เสียง (a e i o u) และแต่ละเสียงจะออกสั้น ชัด และคงที่เสมอ ไม่ว่าจะอยู่ตำแหน่งไหนของคำ',
+      'l2':
+          'ต่างจากภาษาอังกฤษที่สระในพยางค์ที่ไม่เน้นเสียงมักลดรูปเป็นเสียงเบา (schwa, /ə/) เช่น a ใน about ที่แทบไม่มีเสียงชัด ภาษาสเปนไม่มีการลดรูปแบบนี้เลย — สระตัวไหนเขียนอย่างไรก็ออกเสียงแบบนั้นเสมอ ไม่ว่าจะเน้นเสียงหรือไม่',
+      'l3':
+          'ข้อควรระวัง: เมื่อสระสองตัวมาอยู่ติดกันในพยางค์เดียว (เช่น ai, ue) จะกลายเป็นเสียงสระประสม (diphthong) ซึ่งเป็นเรื่องที่จะเรียนแยกในบทถัดๆ ไป บทนี้สอนเฉพาะสระเดี่ยวที่มั่นคงก่อน',
+      'spain_note': null,
+      'thai_contrast':
+          'ภาษาไทยก็มีระบบสระที่ค่อนข้างคงที่เหมือนกัน (ต่างจากภาษาอังกฤษ) จึงเป็นข้อได้เปรียบของผู้เรียนไทย — สิ่งที่ต้องระวังคือไม่เผลอออกเสียงสระสเปนแบบลดรูปตามความเคยชินจากภาษาอังกฤษที่เคยเรียนมาก่อน และไม่ใส่วรรณยุกต์แบบไทยเข้าไปในคำสเปน เพราะภาษาสเปนไม่มีวรรณยุกต์ มีแต่การเน้นพยางค์ (stress)',
+    },
     '11111111-1111-4111-8111-111111111105': {
       'id': '11111111-1111-4111-8111-111111111105',
       'slug': 'c_z_distincion',
@@ -505,6 +762,130 @@ const Map<String, dynamic> kContentPack = {
 
   // --------------------------------------------------------------- exercises --
   'exercises': {
+    // hear and choose: described rather than played, since no audio asset is
+    // bundled yet — the honest-unavailable state in AudioControls covers the
+    // gap, this exercise just does not depend on the audio actually playing.
+    '66666666-6666-4666-8666-666666666610': {
+      'id': '66666666-6666-4666-8666-666666666610',
+      'template_id': 'mcq',
+      'objective_id': '33333333-3333-4333-8333-333333333310',
+      'concept_id': '11111111-1111-4111-8111-111111111106',
+      'prompt_th':
+          'ลองฟังเสียงต้นแบบ (หรืออ่านลักษณะการออกเสียง) แล้วเลือกสระที่ตรงกัน: '
+          'ห่อริมฝีปากให้กลมและแคบที่สุด ลิ้นอยู่สูงและด้านหลังของปาก',
+      'payload': {
+        'options': ['a', 'e', 'i', 'o', 'u'],
+      },
+      'answer_rules': {
+        'accepted': ['u'],
+        'accent_insensitive': true,
+        'error_codes': ['PRON.VOWEL_U'],
+      },
+      'feedback': {
+        'what_changed': 'u',
+        'why_th': 'u เป็นสระที่ห่อริมฝีปากแคบและกลมที่สุด ลิ้นอยู่สูงและหลัง เช่นในคำว่า uno',
+        'contrast': {'es': 'o', 'th': 'o ห่อปากกลมกว่า a แต่กว้างกว่า u'},
+      },
+    },
+    '66666666-6666-4666-8666-666666666611': {
+      'id': '66666666-6666-4666-8666-666666666611',
+      'template_id': 'mcq',
+      'objective_id': '33333333-3333-4333-8333-333333333311',
+      'concept_id': '11111111-1111-4111-8111-111111111106',
+      'prompt_th': 'ตัวอักษร e ในภาษาสเปน ออกเสียงตรงกับข้อใด',
+      'payload': {
+        'stem': 'e',
+        'options': [
+          'เอ สั้นและคงที่ ไม่ลากเสียง',
+          'อี ปากยิ้มแคบ',
+          'แอ ปากอ้ากว้าง',
+          'เออ เสียงเบา ไม่ชัด (schwa)',
+        ],
+      },
+      'answer_rules': {
+        'accepted': ['เอ สั้นและคงที่ ไม่ลากเสียง'],
+        'accent_insensitive': true,
+        'error_codes': ['PRON.VOWEL_E'],
+      },
+      'feedback': {
+        'what_changed': 'เอ สั้นและคงที่ ไม่ลากเสียง',
+        'why_th':
+            'สระสเปนไม่ลดรูปเป็นเสียงเบา (schwa) แบบภาษาอังกฤษ ทุกสระออกเสียงชัดและคงที่เสมอ',
+        'contrast': {
+          'es': 'about (EN)',
+          'th': 'สระ a ในคำอังกฤษนี้ลดรูปเป็นเสียงเบา ซึ่งไม่เกิดขึ้นในภาษาสเปน',
+        },
+      },
+    },
+    '66666666-6666-4666-8666-666666666612': {
+      'id': '66666666-6666-4666-8666-666666666612',
+      'template_id': 'mcq',
+      'objective_id': '33333333-3333-4333-8333-333333333312',
+      'concept_id': '11111111-1111-4111-8111-111111111106',
+      'prompt_th':
+          'คำว่า "mesa" (โต๊ะ) กับ "masa" (แป้ง/มวล) พยางค์แรกออกเสียงสระเหมือนกันหรือไม่',
+      'payload': {
+        'stem': 'mesa / masa',
+        'options': ['เหมือนกัน', 'ต่างกัน'],
+      },
+      'answer_rules': {
+        'accepted': ['ต่างกัน'],
+        'accent_insensitive': true,
+        'error_codes': ['PRON.VOWEL_DISCRIMINATION'],
+      },
+      'feedback': {
+        'what_changed': 'ต่างกัน',
+        'why_th': 'mesa ขึ้นต้นด้วยสระ e ส่วน masa ขึ้นต้นด้วยสระ a ทั้งสองเป็นสระคนละเสียงและคงที่ตลอดคำ',
+        'contrast': {'es': 'mesa / masa', 'th': 'โต๊ะ / แป้ง หรือ มวล'},
+      },
+    },
+    '66666666-6666-4666-8666-666666666613': {
+      'id': '66666666-6666-4666-8666-666666666613',
+      'template_id': 'typed',
+      'objective_id': '33333333-3333-4333-8333-333333333313',
+      'concept_id': '11111111-1111-4111-8111-111111111106',
+      'prompt_th': 'พิมพ์ตัวอักษรสระที่ออกเสียงเหมือนคำว่า "sí" (ใช่) — หนึ่งตัวอักษร',
+      'payload': {
+        'stem': 'sí → ____',
+        'hint_th': 'สระตัวเดียวกับที่ออกเสียง อี',
+      },
+      'answer_rules': {
+        'accepted': ['i'],
+        'accent_insensitive': true,
+        'error_codes': ['VOCAB.VOWEL_LETTER'],
+      },
+      'feedback': {
+        'what_changed': 'i',
+        'why_th': 'sí ออกเสียงด้วยสระ i เพียงตัวเดียว เป็นเสียงสั้นและแหลมที่สุดในกลุ่มสระสเปน',
+        'contrast': {'es': 'sí / si', 'th': 'ใช่ / ถ้า — เขียนต่างกันที่วรรณยุกต์เขียน (tilde) เท่านั้น'},
+      },
+    },
+    // scored_frame is what a recogniser would grade. This build has no ASR at
+    // all — see speaking_view.dart — so submitting only registers attempted
+    // evidence, never a verdict.
+    '66666666-6666-4666-8666-666666666614': {
+      'id': '66666666-6666-4666-8666-666666666614',
+      'template_id': 'repeat_speech',
+      'objective_id': '33333333-3333-4333-8333-333333333314',
+      'concept_id': '11111111-1111-4111-8111-111111111106',
+      'prompt_th': 'กดปุ่มไมค์แล้วอ่านออกเสียงสระทั้งห้าตัวให้ชัดเจนทีละตัว',
+      'payload': {
+        'es': 'a, e, i, o, u',
+        'th': 'ออกเสียงให้สั้นและคงที่ทุกตัว ไม่ลากเสียงหรือเปลี่ยนเสียงกลางคำ',
+        'target_slug': 'vowels_pure',
+        'focus': 'aeiou',
+      },
+      'answer_rules': {
+        'frame_pattern': r'^a',
+        'min_confidence': 0.5,
+        'error_codes': ['PRON.VOWELS'],
+      },
+      'feedback': {
+        'what_changed': '',
+        'why_th': 'ถ้าลากเสียงหรือเปลี่ยนเสียงกลางคำ จะฟังดูเหมือนสำเนียงภาษาอื่นที่ไม่ใช่สเปน',
+        'contrast': {'es': 'a-e-i-o-u', 'th': 'ออกทีละตัวให้สั้นและชัด เว้นจังหวะระหว่างตัวเล็กน้อย'},
+      },
+    },
     '66666666-6666-4666-8666-666666666604': {
       'id': '66666666-6666-4666-8666-666666666604',
       'template_id': 'mcq',

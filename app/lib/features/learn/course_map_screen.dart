@@ -62,6 +62,10 @@ class CourseMapScreen extends ConsumerWidget {
                       body: 'เนื้อหาระดับนี้ยังไม่ได้เผยแพร่')
                   : Column(
                       children: [
+                        if (us.any((u) => u.slug == 'foundation-0')) ...[
+                          const FoundationIntroBanner(),
+                          const SizedBox(height: EdeSpace.lg),
+                        ],
                         for (var i = 0; i < us.length; i++)
                           Padding(
                             padding: const EdgeInsets.only(bottom: EdeSpace.lg),
@@ -157,7 +161,9 @@ class _UnitCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GrammarLabel(parts: [unit.level.label, 'หน่วยที่ $position']),
+          GrammarLabel(parts: unit.slug == 'foundation-0'
+              ? ['ปูพื้นฐาน']
+              : [unit.level.label, 'หน่วยที่ $position']),
           const SizedBox(height: 6),
           Text(unit.titleTh,
               style: EdeType.thaiTitle.copyWith(color: context.colors.onSurface)),

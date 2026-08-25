@@ -290,6 +290,11 @@ sealed class ContentBlock {
           contrastB: (p['contrast_pair'] as Map?)?['b'] as String?,
           contrastNoteTh: (p['contrast_pair'] as Map?)?['note_th'] as String?,
           audio: AudioRef.fromJson((p['audio'] as Map?)?.cast<String, dynamic>()),
+          thaiHelperTh: p['thai_helper_th'] as String?,
+          exampleEs: (p['example'] as Map?)?['es'] as String?,
+          exampleTh: (p['example'] as Map?)?['th'] as String?,
+          syllables: (p['syllables'] as List? ?? const []).cast<String>(),
+          showSpainBadge: (p['spain_badge'] as bool?) ?? false,
         ),
       'comparison' => ComparisonBlock(
           id: id,
@@ -384,10 +389,32 @@ class PronunciationBlock extends ContentBlock {
     this.contrastB,
     this.contrastNoteTh,
     this.audio = const AudioRef(),
+    this.thaiHelperTh,
+    this.exampleEs,
+    this.exampleTh,
+    this.syllables = const [],
+    this.showSpainBadge = false,
   });
   final String targetSlug, focus, noteTh;
   final String? ipaPhonemic, ipaPhonetic, contrastA, contrastB, contrastNoteTh;
   final AudioRef audio;
+
+  /// Optional Thai transliteration bridge (e.g. "โอ-ลา" for "hola"). An
+  /// approximation for absolute beginners only — never a claim that the Thai
+  /// and Spanish sounds are acoustically identical. Left null for sounds with
+  /// no good Thai equivalent (e.g. /θ/, tapped/trilled r, ñ), so the card
+  /// falls back to an explicit "no Thai equivalent" note instead of forcing
+  /// an inaccurate transcription.
+  final String? thaiHelperTh;
+
+  /// A whole-word example beyond the bare letter/contrast pair, for the
+  /// "example word" + syllable-segmentation slot of the pronunciation card.
+  final String? exampleEs, exampleTh;
+  final List<String> syllables;
+
+  /// Shows a small "สเปน" badge when this sound is a notable Spain-vs-Latin
+  /// America contrast (distinción, yeísmo) rather than a universal rule.
+  final bool showSpainBadge;
 }
 
 class ComparisonRow {

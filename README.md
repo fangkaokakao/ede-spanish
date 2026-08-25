@@ -316,14 +316,31 @@ self-reference → Home → course map → Unit 1 → *Me llamo…* → audio co
 word/morphology sheet → ทำไม? → exercise → correction → retry → speaking →
 completion → progress → next recommendation.
 
-A second, real unit now precedes it: **Foundation 0 — *Hola, ¿qué tal?*** (course
-`sort_order: 0`, ahead of Unit 1's `sort_order: 1`), teaching the everyday
-greeting and *distinción* (`casa` /ˈkasa/ vs `caza` /ˈkaθa/) via the same
-schema-driven blocks and completion-rules contract as Unit 1 Lesson 3 — new
-UUIDs throughout, no existing id changed. `UnitSummary.sortOrder` is what makes
-the ordering explicit rather than incidental: both `PackCurriculumRepository`
-and `SupabaseCurriculumRepository` sort units by it rather than trusting
-insertion/query order.
+A second, real unit now precedes it: **Foundation 0**, a sound-and-reading
+course for absolute beginners (course `sort_order: 0`, ahead of Unit 1's
+`sort_order: 1`) — via the same schema-driven blocks and completion-rules
+contract as Unit 1 Lesson 3, new UUIDs throughout, no existing id changed.
+`UnitSummary.sortOrder` (units) and lesson-array order within a unit (lessons —
+see `PackCurriculumRepository._unit`) are what make the ordering explicit
+rather than incidental.
+
+Foundation 0 currently ships two lessons, `LessonSummary.sortOrder` 0 then 1:
+
+1. **El alfabeto y las vocales** — the 27-letter Spanish alphabet and the five
+   pure vowels (`a e i o u`), each with its own `pronunciation_guide` card via
+   the reusable `PronunciationCard` widget (`design_system/pronunciation_card.dart`):
+   IPA, a concise Thai articulation hint, an optional Thai transliteration
+   bridge (e.g. "อา" for `a`) behind progressive disclosure, and — for sounds
+   with no good Thai equivalent — an explicit "no Thai equivalent" note instead
+   of a forced transcription.
+2. **Hola, ¿qué tal?** — the everyday greeting and *distinción*
+   (`casa` /ˈkasa/ vs `caza` /ˈkaθa/).
+
+The full proposed Foundation 0 curriculum (alphabet → vowels → consonants →
+digraphs → *distinción*/*yeísmo* → syllables → diphthongs/hiatus → stress and
+written accents → reading words/phrases/sentences) is tracked as the course
+map for this unit; only the first lesson above is content-complete so far —
+see `kAvailableLessonSlugs`.
 
 **The player is schema-driven.** `features/lesson/block_renderers.dart` is a
 `Map<String, BlockBuilder>`; the player walks `lesson.blocks` and looks each

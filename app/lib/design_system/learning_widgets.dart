@@ -296,6 +296,51 @@ class RequirementChip extends StatelessWidget {
   }
 }
 
+/// Shown above the CEFR journey whenever Foundation 0 is present, so a learner
+/// immediately understands the course-position: "ฉันกำลังเรียนเสียงและการอ่าน
+/// ก่อนเริ่มภาษาสเปนจริง" — sound and reading come before "real" Spanish, not
+/// instead of it.
+class FoundationIntroBanner extends StatelessWidget {
+  const FoundationIntroBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(EdeSpace.xl),
+      decoration: BoxDecoration(
+        color: context.tokens.primarySurface,
+        borderRadius: BorderRadius.circular(EdeRadius.card),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AzulejoTile(size: 40, progress: 0.25, highlight: true),
+          const SizedBox(width: EdeSpace.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('ปูพื้นฐาน: เสียงและการอ่าน',
+                    style: EdeType.thaiTitle
+                        .copyWith(color: context.colors.onSurface)),
+                const SizedBox(height: EdeSpace.xs),
+                Text(
+                  'ก่อนเริ่มภาษาสเปนจริง คุณจะได้ฝึกฟัง สังเกต เลียนเสียง '
+                  'แยกเสียง และอ่านออกเสียงให้คล่องก่อน — เพื่อให้ทุกบทเรียน '
+                  'หลังจากนี้อ่านออกเสียงถูกต้องตั้งแต่ต้น',
+                  style: EdeType.thaiBodySmall
+                      .copyWith(color: context.tokens.inkSoft),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Banner shown whenever the app is running without a backend, so a reviewer is
 /// never misled about what is real.
 class LocalModeBanner extends StatelessWidget {

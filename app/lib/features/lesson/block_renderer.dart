@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../design_system/components.dart';
 import '../../design_system/learning_widgets.dart';
+import '../../design_system/pronunciation_card.dart';
 import '../../design_system/theme.dart';
 import '../../design_system/tokens.dart';
 import '../../domain/entities.dart';
@@ -219,81 +220,22 @@ class _PronunciationState extends ConsumerState<_Pronunciation> {
       return ok;
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GrammarLabel(parts: ['การออกเสียง', b.focus]),
-        const SizedBox(height: EdeSpace.md),
-        // Phonemic and phonetic are shown separately because they are different
-        // claims: one is about the variety, one about this recording.
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(b.focus,
-                style: EdeType.spanishDisplay
-                    .copyWith(color: context.colors.onSurface)),
-            const SizedBox(width: EdeSpace.md),
-            if (b.ipaPhonemic != null)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: EdeSpace.sm, vertical: 2),
-                decoration: BoxDecoration(
-                  color: context.tokens.primarySurface,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text('/${b.ipaPhonemic}/',
-                    style: EdeType.numeric.copyWith(color: context.colors.primary)),
-              ),
-          ],
-        ),
-        const SizedBox(height: EdeSpace.md),
-        Text(b.noteTh,
-            style: EdeType.thaiBody.copyWith(color: context.colors.onSurface)),
-        if (b.contrastA != null && b.contrastB != null) ...[
-          const SizedBox(height: EdeSpace.lg),
-          Container(
-            padding: const EdgeInsets.all(EdeSpace.lg),
-            decoration: BoxDecoration(
-              color: context.tokens.retrySurface,
-              borderRadius: BorderRadius.circular(EdeRadius.control),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(b.contrastA!,
-                        style: EdeType.spanishInline
-                            .copyWith(color: context.tokens.retry)),
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: EdeSpace.sm),
-                      child: Text('≠',
-                          style: TextStyle(color: context.tokens.retry)),
-                    ),
-                    Text(b.contrastB!,
-                        style: EdeType.spanishInline
-                            .copyWith(color: context.tokens.retry)),
-                  ],
-                ),
-                if (b.contrastNoteTh != null) ...[
-                  const SizedBox(height: EdeSpace.xs),
-                  Text(b.contrastNoteTh!,
-                      style: EdeType.thaiBodySmall
-                          .copyWith(color: context.colors.onSurface)),
-                ],
-              ],
-            ),
-          ),
-        ],
-        const SizedBox(height: EdeSpace.lg),
-        AudioControls(
-          onNormal: () => play(b.audio.normal, 1.0),
-          onSlow: () => play(b.audio.slow ?? b.audio.normal, 0.7),
-          unavailableNote: _note,
-        ),
-      ],
+    return PronunciationCard(
+      focus: b.focus,
+      ipaPhonemic: b.ipaPhonemic,
+      ipaPhonetic: b.ipaPhonetic,
+      noteTh: b.noteTh,
+      thaiHelperTh: b.thaiHelperTh,
+      exampleEs: b.exampleEs,
+      exampleTh: b.exampleTh,
+      syllables: b.syllables,
+      contrastA: b.contrastA,
+      contrastB: b.contrastB,
+      contrastNoteTh: b.contrastNoteTh,
+      showSpainBadge: b.showSpainBadge,
+      onPlayNormal: () => play(b.audio.normal, 1.0),
+      onPlaySlow: () => play(b.audio.slow ?? b.audio.normal, 0.7),
+      unavailableNote: _note,
     );
   }
 }
