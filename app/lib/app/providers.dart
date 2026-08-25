@@ -26,6 +26,20 @@ final databaseProvider = Provider<AppDatabase>(
   (_) => throw UnimplementedError('override databaseProvider in main() or tests'),
 );
 
+/// The single override main() applies to reach a real database, extracted so
+/// a widget test can exercise the exact same wiring (see
+/// test/app/main_wiring_test.dart) — that is what would have caught
+/// `databaseProvider` being left throwing `UnimplementedError` in production.
+///
+/// Closes [db] when the provider (and so the ProviderScope that owns it) is
+/// disposed, mirroring how `databaseProvider.overrideWithValue` never would.
+List<Override> productionOverrides(AppDatabase db) => [
+      databaseProvider.overrideWith((ref) {
+        ref.onDispose(db.close);
+        return db;
+      }),
+    ];
+
 // ------------------------------------------------------------- repositories --
 
 /// The pack is the read model in BOTH modes: published curriculum is served as

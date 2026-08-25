@@ -171,20 +171,42 @@ Both conditionals check `dart.library.io` (native) then `dart.library.js_interop
 and would silently fall through to the "unsupported" stub.
 
 **Not done, and not fabricated**: `sqlite3.wasm` and `drift_worker.js`, the two
-runtime files `WasmDatabase.open` needs alongside the built app. They must be
-generated from the *resolved* `sqlite3`/`drift` package versions (typically via
-`dart run drift_dev make-web-assets web/` after `flutter pub get`, package
-versions permitting) — committing a copy from a different environment would
-silently mismatch whatever this project actually resolves to. **`flutter build
-web` has not been run against this scaffold**: there is no Flutter SDK in the
-authoring sandbox that produced this change (same limitation the rest of this
-README already documents for `app/`). Verify it via `flutter-ci.yml`'s runner
-— see "Run Flutter CI" below — or on a machine with Flutter installed:
+runtime files `WasmDatabase.open` needs alongside the built app. `dart run
+drift_dev make-web-assets` is **not a real drift_dev command** — do not use
+it. They must instead be produced from the *resolved* `sqlite3`/`drift`
+package versions (there is no Flutter/Dart SDK, and no network access, in the
+sandbox that authored this note, so the exact resolved versions and exact
+retrieval commands below need confirming on a machine that can run
+`flutter pub get`):
+
+- `drift_worker.js` is compiled from a small Dart entrypoint you own, e.g.
+  `app/web/drift_worker.dart`:
+  ```dart
+  import 'package:drift/wasm.dart';
+  void main() => WasmDatabase.workerMainForOpen();
+  ```
+  compiled with `dart compile js -O4 -o web/drift_worker.js web/drift_worker.dart`
+  (run from `app/`, after `flutter pub get`).
+- `sqlite3.wasm` is the WebAssembly build of SQLite matching the **resolved**
+  `sqlite3` version in `app/pubspec.lock` (not the `>=2.1.0 <3.0.0` range in
+  `pubspec.yaml` — the lockfile has the exact version). Source it from that
+  exact version — e.g. the matching `sqlite3.dart` GitHub release asset, or
+  wherever the resolved `sqlite3` package version documents obtaining it —
+  never copy one from another checkout or a different `sqlite3` version, since
+  a mismatch fails silently at runtime rather than at build time.
+
+**`flutter build web` has not been run against this scaffold**: there is no
+Flutter SDK in the authoring sandbox that produced this change (same
+limitation the rest of this README already documents for `app/`). Verify it
+via `flutter-ci.yml`'s runner — see "Run Flutter CI" below — or on a machine
+with Flutter installed:
 
 ```bash
 cd app
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
+dart compile js -O4 -o web/drift_worker.js web/drift_worker.dart
+# plus sqlite3.wasm sourced for the resolved sqlite3 version, see above
 flutter build web
 ```
 
