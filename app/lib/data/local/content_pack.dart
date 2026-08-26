@@ -32,9 +32,28 @@ const String kUnitPreA1U1Id = '22222222-2222-4222-8222-222222222203';
 /// ahead of Pre-A1 Unit 1 (sort_order 0 vs 1). New ids, a different suffix
 /// family from the seeded Unit 1 / Lesson 3 fixtures above, so nothing here
 /// collides with or renumbers a UUID something else already depends on.
+///
+/// STABLE — never change these. `kLessonFoundation0L1Id` was originally the
+/// *first* Foundation 0 lesson; it is not conversational-content-first any
+/// more (see product rule: Foundation 0 teaches letters/sounds/reading before
+/// any greeting, and only Pre-A1 is conversational). Its id, slug and every
+/// block inside it are untouched — only its course-position moved, via the
+/// unit's `sections`/`lessons` ordering below, to a "bonus" slot after the
+/// sound-and-reading curriculum.
 const String kUnitFoundation0Id = '22222222-2222-4222-8222-222222222200';
 const String kLessonFoundation0L1Id = '44444444-4444-4444-8444-444444444401';
 const String kLessonFoundation0L1Slug = 'foundation-0-l1';
+
+/// Foundation 0, Section 1 — รู้จักตัวอักษร (the alphabet). The learner's
+/// actual first lesson in course order now.
+const String kLessonFoundation0S1Id = '44444444-4444-4444-8444-444444444410';
+const String kLessonFoundation0S1Slug = 'foundation-0-s1-letters';
+
+/// Foundation 0, Section 2 — สระ (vowels). Ships with exactly one vowel (a)
+/// authored end-to-end as the reusable reference pattern; e/i/o/u follow in a
+/// later change once this pattern is reviewed.
+const String kLessonFoundation0S2Id = '44444444-4444-4444-8444-444444444420';
+const String kLessonFoundation0S2Slug = 'foundation-0-s2-vowel-a';
 
 /// Lesson slugs with a real, content-complete pack entry. A unit can legally
 /// list a lesson stub that is not in here yet — QA-incomplete content is
@@ -42,6 +61,8 @@ const String kLessonFoundation0L1Slug = 'foundation-0-l1';
 const Set<String> kAvailableLessonSlugs = {
   'pre-a1-u1-l3',
   kLessonFoundation0L1Slug,
+  kLessonFoundation0S1Slug,
+  kLessonFoundation0S2Slug,
 };
 
 const Map<String, dynamic> kContentPack = {
@@ -104,18 +125,126 @@ const Map<String, dynamic> kContentPack = {
       'slug': 'foundation-0',
       'level': 'pre_a1',
       'sort_order': 0,
-      'title_th': 'ปูพื้นฐาน: เสียงและคำทักทายแรก',
-      'title_es': 'Fundamentos: sonidos y primeros saludos',
+      'title_th': 'Foundation 0 · เสียงและการอ่าน',
+      'title_es': 'Fundamentos: sonidos y lectura',
       'subtitle_th':
-          'ก่อนเริ่มบทเรียนแรก ทำความรู้จักคำทักทายพื้นฐานและเสียง c/z แบบสเปน',
+          'ก่อนเริ่มภาษาสเปนจริง ปูพื้นตัวอักษร เสียง และการอ่านให้แน่นก่อน '
+          'เรียนจบหมวดนี้แล้วค่อยไปทักทายและแนะนำตัวใน Pre-A1',
+      // Order here IS the learning order (see
+      // LocalLearnerRepository.dailyPlan in local_repositories.dart, which
+      // walks this array as-is): letters, then vowels, with the original
+      // conversational lesson moved to a bonus slot at the end — never in
+      // front of the sound curriculum.
       'lessons': [
+        {
+          'id': kLessonFoundation0S1Id,
+          'slug': kLessonFoundation0S1Slug,
+          'title_th': 'รู้จักตัวอักษรภาษาสเปน',
+          'title_es': 'El alfabeto español',
+          'sort_order': 1,
+          'estimated_minutes': 8,
+        },
+        {
+          'id': kLessonFoundation0S2Id,
+          'slug': kLessonFoundation0S2Slug,
+          'title_th': 'เสียงสระ a',
+          'title_es': 'La vocal a',
+          'sort_order': 2,
+          'estimated_minutes': 7,
+        },
         {
           'id': kLessonFoundation0L1Id,
           'slug': kLessonFoundation0L1Slug,
           'title_th': 'สวัสดีแบบสเปน',
           'title_es': 'Hola, ¿qué tal?',
-          'sort_order': 1,
+          'sort_order': 100,
           'estimated_minutes': 6,
+        },
+      ],
+      // The Foundation 0 course map (see CourseMapScreen). Sections 3-10 have
+      // no `lesson_slugs` yet — deliberately not stubbed with placeholder
+      // lessons (see CLAUDE.md: never fabricate lesson content). They render
+      // as "เร็วๆ นี้" until authored in a follow-up change, per the review
+      // gate on this first slice (Section 1, Section 2/vowel-a only).
+      'sections': [
+        {
+          'id': 'foundation-0-section-1',
+          'title_th': '01 · รู้จักตัวอักษร',
+          'description_th': 'ตัวอักษร A-Z และ Ñ ตัวพิมพ์ใหญ่ พิมพ์เล็ก และชื่อตัวอักษร',
+          'sort_order': 1,
+          'lesson_slugs': [kLessonFoundation0S1Slug],
+        },
+        {
+          'id': 'foundation-0-section-2',
+          'title_th': '02 · สระ',
+          'description_th':
+              'เสียงสระทั้ง 5 เสียงทีละตัว พร้อมคำอ่านช่วยภาษาไทย',
+          'sort_order': 2,
+          'lesson_slugs': [kLessonFoundation0S2Slug],
+        },
+        {
+          'id': 'foundation-0-section-3',
+          'title_th': '03 · พยัญชนะพื้นฐาน',
+          'description_th': 'เสียงพยัญชนะที่ออกเสียงตรงไปตรงมา เช่น m n p t',
+          'sort_order': 3,
+          'lesson_slugs': <String>[],
+        },
+        {
+          'id': 'foundation-0-section-4',
+          'title_th': '04 · ตัวอักษรที่เปลี่ยนเสียง',
+          'description_th': 'ทำไม c และ g ออกเสียงไม่เหมือนกันทุกครั้ง',
+          'sort_order': 4,
+          'lesson_slugs': <String>[],
+        },
+        {
+          'id': 'foundation-0-section-5',
+          'title_th': '05 · ตัวพิเศษและตัวควบ',
+          'description_th': 'ตัวอักษรเฉพาะของสเปน เช่น ch ll rr qu gu ñ',
+          'sort_order': 5,
+          'lesson_slugs': <String>[],
+        },
+        {
+          'id': 'foundation-0-section-6',
+          'title_th': '06 · อ่านพยางค์',
+          'description_th': 'ประกอบเสียงตัวอักษรให้เป็นพยางค์แรกของคุณ',
+          'sort_order': 6,
+          'lesson_slugs': <String>[],
+        },
+        {
+          'id': 'foundation-0-section-7',
+          'title_th': '07 · สระประสม',
+          'description_th': 'เมื่อสระสองตัวมาอยู่ด้วยกันในคำเดียว',
+          'sort_order': 7,
+          'lesson_slugs': <String>[],
+        },
+        {
+          'id': 'foundation-0-section-8',
+          'title_th': '08 · การลงเสียง',
+          'description_th': 'รู้ว่าจะเน้นเสียงตรงไหน และเครื่องหมาย ́ บอกอะไร',
+          'sort_order': 8,
+          'lesson_slugs': <String>[],
+        },
+        {
+          'id': 'foundation-0-section-9',
+          'title_th': '09 · อ่านคำจริง',
+          'description_th': 'อ่านคำศัพท์ที่คุ้นเคยด้วยตัวเอง',
+          'sort_order': 9,
+          'lesson_slugs': <String>[],
+        },
+        {
+          'id': 'foundation-0-section-10',
+          'title_th': '10 · อ่านวลีและประโยค',
+          'description_th': 'อ่านวลีและประโยคสั้น ๆ แบบเต็มรูปแบบ',
+          'sort_order': 10,
+          'lesson_slugs': <String>[],
+        },
+        {
+          'id': 'foundation-0-bonus',
+          'title_th': 'โบนัส · บทสนทนาแรก',
+          'description_th':
+              'ทักทายแบบสเปนสั้น ๆ ระหว่างทาง — เรียนได้ตอนไหนก็ได้ ไม่ต้องรอจนจบทั้ง 10 หมวด',
+          'sort_order': 100,
+          'lesson_slugs': [kLessonFoundation0L1Slug],
         },
       ],
     },
@@ -142,6 +271,242 @@ const Map<String, dynamic> kContentPack = {
 
   // ----------------------------------------------------------------- lessons --
   'lessons': {
+    kLessonFoundation0S1Id: {
+      'id': kLessonFoundation0S1Id,
+      'version_id': '55555555-5555-4555-8555-555555555510',
+      'slug': kLessonFoundation0S1Slug,
+      'title_th': 'รู้จักตัวอักษรภาษาสเปน',
+      'title_es': 'El alfabeto español',
+      'goal_th':
+          'เรียนจบบทนี้ คุณจะรู้จักตัวอักษรภาษาสเปนทั้ง 27 ตัว ทั้งตัวพิมพ์ใหญ่และพิมพ์เล็ก และบอกชื่อตัวอักษรที่มีเฉพาะในภาษาสเปนได้',
+      'estimated_minutes': 8,
+
+      'completion_rules': {
+        'required_correct_exercises': [
+          '66666666-6666-4666-8666-666666666610',
+          '66666666-6666-4666-8666-666666666611',
+        ],
+        'required_speech_exercises': ['66666666-6666-4666-8666-666666666612'],
+        'min_blocks_viewed': 8,
+      },
+
+      'blocks': [
+        {
+          'id': 'blk-s1-01',
+          'sort_order': 1,
+          'block_type': 'heading',
+          'payload': {'th': 'ก่อนอ่านภาษาสเปนได้ ต้องรู้จักตัวอักษรก่อน'},
+        },
+        {
+          'id': 'blk-s1-02',
+          'sort_order': 2,
+          'block_type': 'explanation',
+          'concept_id': '11111111-1111-4111-8111-111111111110',
+          'why_l1_th':
+              'ตัวอักษรคือสัญลักษณ์ที่ใช้แทนเสียงพูด เมื่อนำตัวอักษรมาเรียงต่อกันจะกลายเป็นคำที่อ่านออกเสียงได้',
+          'payload': {
+            'title_th': 'ตัวอักษรคืออะไร',
+            'th':
+                'ตัวอักษร (letra) คือสัญลักษณ์ที่ใช้แทนเสียงพูด เมื่อนำตัวอักษรหลายตัวมาเรียงต่อกัน จะกลายเป็นคำที่อ่านออกเสียงได้ ภาษาสเปนใช้ตัวอักษรคล้ายภาษาอังกฤษมาก แต่มีตัวพิเศษเพิ่มมาอีกหนึ่งตัวคือ ñ ทำให้ภาษาสเปนมีตัวอักษรทั้งหมด 27 ตัว',
+          },
+        },
+        {
+          'id': 'blk-s1-03',
+          'sort_order': 3,
+          'block_type': 'explanation',
+          'payload': {
+            'title_th': 'ตัวพิมพ์ใหญ่กับตัวพิมพ์เล็ก',
+            'th':
+                'ตัวอักษรแต่ละตัวเขียนได้สองแบบ: ตัวพิมพ์ใหญ่ (เช่น A) กับตัวพิมพ์เล็ก (เช่น a) รูปร่างต่างกัน แต่เป็น "ตัวอักษรเดียวกัน" และแทนเสียงเดียวกัน ตัวพิมพ์ใหญ่มักใช้ขึ้นต้นประโยคหรือชื่อเฉพาะ ส่วนตัวพิมพ์เล็กใช้ในคำทั่วไป',
+          },
+        },
+        {
+          'id': 'blk-s1-04',
+          'sort_order': 4,
+          'block_type': 'alphabet_grid',
+          'why_l1_th':
+              'ตัวอักษร ñ (เอญเญ) เป็นตัวเดียวที่ไม่มีในภาษาอังกฤษ ออกเสียงคล้าย ญ ในภาษาไทย และทำให้คำอย่าง año (ปี) ต่างจาก ano (คำหยาบ) โดยสิ้นเชิง',
+          'payload': {
+            'intro_note_th':
+                'คำอ่านภาษาไทยด้านล่างเป็นการเทียบเสียงคร่าว ๆ เพื่อช่วยจำชื่อตัวอักษรเท่านั้น ไม่ใช่เสียงที่ตรงกันทุกประการ',
+            'audio': {
+              'normal': 'foundation-0/s1/alphabet-recitation-normal.m4a',
+              'slow': 'foundation-0/s1/alphabet-recitation-slow.m4a',
+            },
+            'letters': [
+              {'upper': 'A', 'lower': 'a', 'name_es': 'a', 'name_th': 'อา'},
+              {'upper': 'B', 'lower': 'b', 'name_es': 'be', 'name_th': 'เบ'},
+              {'upper': 'C', 'lower': 'c', 'name_es': 'ce', 'name_th': 'เซ'},
+              {'upper': 'D', 'lower': 'd', 'name_es': 'de', 'name_th': 'เด'},
+              {'upper': 'E', 'lower': 'e', 'name_es': 'e', 'name_th': 'เอ'},
+              {'upper': 'F', 'lower': 'f', 'name_es': 'efe', 'name_th': 'เอเฟะ'},
+              {'upper': 'G', 'lower': 'g', 'name_es': 'ge', 'name_th': 'เค'},
+              {'upper': 'H', 'lower': 'h', 'name_es': 'hache', 'name_th': 'อาเช่'},
+              {'upper': 'I', 'lower': 'i', 'name_es': 'i', 'name_th': 'อี'},
+              {'upper': 'J', 'lower': 'j', 'name_es': 'jota', 'name_th': 'โคตา'},
+              {'upper': 'K', 'lower': 'k', 'name_es': 'ka', 'name_th': 'กา'},
+              {'upper': 'L', 'lower': 'l', 'name_es': 'ele', 'name_th': 'เอเล'},
+              {'upper': 'M', 'lower': 'm', 'name_es': 'eme', 'name_th': 'เอเม'},
+              {'upper': 'N', 'lower': 'n', 'name_es': 'ene', 'name_th': 'เอเน'},
+              {'upper': 'Ñ', 'lower': 'ñ', 'name_es': 'eñe', 'name_th': 'เอญเญ'},
+              {'upper': 'O', 'lower': 'o', 'name_es': 'o', 'name_th': 'โอ'},
+              {'upper': 'P', 'lower': 'p', 'name_es': 'pe', 'name_th': 'เป'},
+              {'upper': 'Q', 'lower': 'q', 'name_es': 'cu', 'name_th': 'กู'},
+              {'upper': 'R', 'lower': 'r', 'name_es': 'erre', 'name_th': 'เอเร่'},
+              {'upper': 'S', 'lower': 's', 'name_es': 'ese', 'name_th': 'เอเซะ'},
+              {'upper': 'T', 'lower': 't', 'name_es': 'te', 'name_th': 'เต'},
+              {'upper': 'U', 'lower': 'u', 'name_es': 'u', 'name_th': 'อู'},
+              {'upper': 'V', 'lower': 'v', 'name_es': 'uve', 'name_th': 'อูเบะ'},
+              {
+                'upper': 'W',
+                'lower': 'w',
+                'name_es': 'uve doble',
+                'name_th': 'อูเบะโดเบล',
+              },
+              {'upper': 'X', 'lower': 'x', 'name_es': 'equis', 'name_th': 'เอกิส'},
+              {'upper': 'Y', 'lower': 'y', 'name_es': 'ye', 'name_th': 'เย'},
+              {'upper': 'Z', 'lower': 'z', 'name_es': 'zeta', 'name_th': 'เซตะ'},
+            ],
+          },
+        },
+        {
+          'id': 'blk-s1-05',
+          'sort_order': 5,
+          'block_type': 'exercise_embed',
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666610'},
+        },
+        {
+          'id': 'blk-s1-06',
+          'sort_order': 6,
+          'block_type': 'exercise_embed',
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666611'},
+        },
+        {
+          'id': 'blk-s1-07',
+          'sort_order': 7,
+          'block_type': 'exercise_embed',
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666612'},
+        },
+        {
+          'id': 'blk-s1-08',
+          'sort_order': 8,
+          'block_type': 'review',
+          'payload': {
+            'title_th': 'สรุปบทนี้',
+            'points_th': [
+              'ภาษาสเปนมีตัวอักษร 27 ตัว รวม ñ ที่ไม่มีในภาษาอังกฤษ',
+              'ตัวพิมพ์ใหญ่กับตัวพิมพ์เล็กคือตัวอักษรเดียวกัน',
+              'ตัวอักษรแต่ละตัวมีชื่อของตัวเอง แยกจากเสียงที่มันแทน',
+            ],
+            'th': 'ตอนนี้คุณรู้จักตัวอักษรภาษาสเปนครบทั้ง 27 ตัวแล้ว พร้อมไปเรียนเสียงสระต่อ',
+          },
+        },
+      ],
+    },
+    kLessonFoundation0S2Id: {
+      'id': kLessonFoundation0S2Id,
+      'version_id': '55555555-5555-4555-8555-555555555520',
+      'slug': kLessonFoundation0S2Slug,
+      'title_th': 'เสียงสระ a',
+      'title_es': 'La vocal a',
+      'goal_th':
+          'เรียนจบบทนี้ คุณจะออกเสียงสระ a แบบสเปนได้ แยกเสียง a ได้ยินจากเสียงอื่น และแยกคำว่า casa เป็นพยางค์ได้',
+      'estimated_minutes': 7,
+
+      'completion_rules': {
+        'required_correct_exercises': [
+          '66666666-6666-4666-8666-666666666620',
+          '66666666-6666-4666-8666-666666666621',
+        ],
+        'required_speech_exercises': ['66666666-6666-4666-8666-666666666623'],
+        'min_blocks_viewed': 8,
+      },
+
+      'blocks': [
+        {
+          'id': 'blk-s2a-01',
+          'sort_order': 1,
+          'block_type': 'heading',
+          'payload': {'th': 'สระตัวแรก: a'},
+        },
+        {
+          'id': 'blk-s2a-02',
+          'sort_order': 2,
+          'block_type': 'explanation',
+          'concept_id': '11111111-1111-4111-8111-111111111110',
+          'why_l1_th':
+              'สระคือเสียงที่ลมออกจากปากได้อย่างอิสระ ไม่มีลิ้น ฟัน หรือริมฝีปากมากั้น ภาษาสเปนมีสระ 5 เสียงคือ a e i o u',
+          'payload': {
+            'title_th': 'สระคืออะไร',
+            'th':
+                'สระ (vocal) คือเสียงที่ลมออกจากปากได้อย่างอิสระ ไม่มีอะไรมากั้นทางเดินลม ภาษาสเปนมีสระอยู่ 5 เสียงเท่านั้นคือ a e i o u และแต่ละตัวออกเสียงคงที่เสียงเดียวเสมอ ไม่เปลี่ยนไปเป็นเสียงอื่นเหมือนภาษาอังกฤษ (เช่น a ในคำว่า cat, ate, about ออกเสียงต่างกันหมด แต่ a ในภาษาสเปนออกเสียงเดียวตลอด)',
+          },
+        },
+        {
+          'id': 'blk-s2a-03',
+          'sort_order': 3,
+          'block_type': 'pronunciation_guide',
+          'concept_id': null,
+          'why_l1_th':
+              'สระ a ในภาษาสเปนอ้าปากกว้างกว่าสระ อะ ในภาษาไทย และไม่มีการลากเสียงสั้น-ยาวแบบภาษาไทย',
+          'payload': {
+            'target_slug': 'vowel_a',
+            'focus': 'A a',
+            'ipa_phonemic': 'a',
+            'note_th':
+                'อ้าปากกว้าง ลิ้นอยู่ต่ำและกลางปาก ริมฝีปากไม่ห่อ เสียงสั้น กระชับ และคงที่ทุกครั้งที่เจอ ไม่ว่า a จะอยู่ตำแหน่งไหนของคำ',
+            'thai_helper_th': 'อา',
+            'example_es': 'casa',
+            'example_meaning_th': 'บ้าน',
+            'example_reading_th': 'กา-ซา',
+            'example_syllables': ['ca', 'sa'],
+            'show_spain_badge': false,
+            'audio': {
+              'normal': 'foundation-0/s2/vowel-a-normal.m4a',
+              'slow': 'foundation-0/s2/vowel-a-slow.m4a',
+            },
+          },
+        },
+        {
+          'id': 'blk-s2a-04',
+          'sort_order': 4,
+          'block_type': 'exercise_embed',
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666620'},
+        },
+        {
+          'id': 'blk-s2a-05',
+          'sort_order': 5,
+          'block_type': 'exercise_embed',
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666621'},
+        },
+        {
+          'id': 'blk-s2a-06',
+          'sort_order': 6,
+          'block_type': 'exercise_embed',
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666622'},
+        },
+        {
+          'id': 'blk-s2a-07',
+          'sort_order': 7,
+          'block_type': 'exercise_embed',
+          'payload': {'exercise_id': '66666666-6666-4666-8666-666666666623'},
+        },
+        {
+          'id': 'blk-s2a-08',
+          'sort_order': 8,
+          'block_type': 'review',
+          'payload': {
+            'title_th': 'สรุปบทนี้',
+            'points_th': [
+              'สระ a ออกเสียงคงที่เสียงเดียวเสมอ ไม่เปลี่ยนไปเป็นเสียงอื่น',
+              'คำอ่านไทย “อา” เป็นสะพานช่วยจำ ไม่ใช่เสียงที่เหมือนกันทุกประการ',
+              'casa แยกเป็น 2 พยางค์: ca-sa',
+            ],
+            'th': 'ตอนนี้คุณออกเสียงสระ a แบบสเปนและแยกพยางค์ของ casa ได้แล้ว',
+          },
+        },
+      ],
+    },
     kLessonFoundation0L1Id: {
       'id': kLessonFoundation0L1Id,
       'version_id': '55555555-5555-4555-8555-555555555501',
@@ -455,6 +820,21 @@ const Map<String, dynamic> kContentPack = {
   // Authored depths only. l4 is deliberately absent: it is the one tier that
   // may be generated at request time, and it must be labelled as generated.
   'concepts': {
+    '11111111-1111-4111-8111-111111111110': {
+      'id': '11111111-1111-4111-8111-111111111110',
+      'slug': 'what_is_a_letter_sound',
+      'name_th': 'ตัวอักษร สระ พยัญชนะ คืออะไร',
+      'name_es': 'Letras, vocales y consonantes',
+      'l1':
+          'ตัวอักษรคือสัญลักษณ์แทนเสียง สระคือเสียงที่ลมออกได้อย่างอิสระ ส่วนพยัญชนะคือเสียงที่มีบางส่วนของปากมากั้นทางเดินลม',
+      'l2':
+          'ภาษาสเปนมีตัวอักษร 27 ตัว แบ่งเป็นสระ 5 ตัว (a e i o u) และพยัญชนะ 22 ตัว สระในภาษาสเปนออกเสียงคงที่เสมอ ต่างจากภาษาอังกฤษที่สระตัวเดียวกันออกเสียงได้หลายแบบขึ้นกับคำ',
+      'l3':
+          'ข้อควรระวัง: ตัวอักษรกับเสียงไม่ได้ตรงกันเสมอไปแบบหนึ่งต่อหนึ่ง เช่น c และ g เปลี่ยนเสียงตามสระที่ตามมา (ca/co/cu ต่างจาก ce/ci) และบางตัวอักษรอย่าง h ไม่ออกเสียงเลย เนื้อหาส่วนนี้จะค่อย ๆ อธิบายทีละกรณีในบทถัดไป ไม่สอนรวดเดียวทั้งหมด',
+      'spain_note': null,
+      'thai_contrast':
+          'ภาษาไทยก็แบ่งสระกับพยัญชนะเหมือนกัน แต่สระไทยมีทั้งสระเสียงสั้นและยาว (อะ/อา) ส่วนสระสเปนไม่มีการลากเสียงสั้น-ยาวแบบนั้น การอ่านสระสเปนจึงควรอ่านสั้น กระชับ เท่ากันทุกครั้ง',
+    },
     '11111111-1111-4111-8111-111111111105': {
       'id': '11111111-1111-4111-8111-111111111105',
       'slug': 'c_z_distincion',
@@ -505,6 +885,166 @@ const Map<String, dynamic> kContentPack = {
 
   // --------------------------------------------------------------- exercises --
   'exercises': {
+    '66666666-6666-4666-8666-666666666610': {
+      'id': '66666666-6666-4666-8666-666666666610',
+      'template_id': 'mcq',
+      'objective_id': '33333333-3333-4333-8333-333333333310',
+      'concept_id': null,
+      'prompt_th': 'ตัวพิมพ์เล็กของตัวอักษร “M” คือข้อใด',
+      'payload': {
+        'stem': 'M',
+        'options': ['m', 'n', 'w', 'ñ'],
+      },
+      'answer_rules': {
+        'accepted': ['m'],
+        'accent_insensitive': true,
+        'error_codes': ['LETTER.CASE'],
+      },
+      'feedback': {
+        'what_changed': 'm',
+        'why_th':
+            'M ตัวพิมพ์ใหญ่กับ m ตัวพิมพ์เล็กคือตัวอักษรเดียวกัน แค่รูปร่างต่างกันตามตำแหน่งที่ใช้',
+        'contrast': {'es': 'N n', 'th': 'คนละตัวอักษรกับ M m'},
+      },
+    },
+    '66666666-6666-4666-8666-666666666611': {
+      'id': '66666666-6666-4666-8666-666666666611',
+      'template_id': 'mcq',
+      'objective_id': '33333333-3333-4333-8333-333333333311',
+      'concept_id': null,
+      'prompt_th': 'ตัวอักษรตัวใดที่มีเฉพาะในภาษาสเปน ไม่มีในภาษาอังกฤษ',
+      'payload': {
+        'stem': '¿Cuál letra es exclusiva del español?',
+        'options': ['ñ', 'k', 'w', 'x'],
+      },
+      'answer_rules': {
+        'accepted': ['ñ'],
+        'accent_insensitive': false,
+        'error_codes': ['LETTER.SPANISH_ONLY'],
+      },
+      'feedback': {
+        'what_changed': 'ñ',
+        'why_th':
+            'ñ (เอญเญ) เป็นตัวอักษรเดียวที่ไม่มีในภาษาอังกฤษ และทำให้คำอย่าง año (ปี) ต่างจากคำอื่นที่สะกดคล้ายกันแต่ไม่มี ñ',
+        'contrast': {'es': 'k, w, x', 'th': 'มีอยู่แล้วในภาษาอังกฤษ (ใช้น้อยในคำสเปนแท้)'},
+      },
+    },
+    // scored_frame is what a recogniser would grade. This build has no ASR at
+    // all — see speaking_view.dart — so submitting only registers attempted
+    // evidence, never a verdict.
+    '66666666-6666-4666-8666-666666666612': {
+      'id': '66666666-6666-4666-8666-666666666612',
+      'template_id': 'repeat_speech',
+      'objective_id': '33333333-3333-4333-8333-333333333312',
+      'concept_id': null,
+      'prompt_th': 'กดปุ่มไมค์แล้วออกเสียงชื่อตัวอักษร “ñ”',
+      'payload': {
+        'es': 'eñe',
+        'th': 'ออกเสียงคล้าย เอ-ญเญ ลิ้นแตะเพดานปาก',
+        'target_slug': 'letter_name_ene',
+        'focus': 'ñ',
+      },
+      'answer_rules': {
+        'frame_pattern': r'^e\s*ñ?e$',
+        'min_confidence': 0.5,
+        'error_codes': ['PRON.ENE'],
+      },
+      'feedback': {
+        'what_changed': '',
+        'why_th': 'ชื่อของตัวอักษร ñ คือ “eñe” แยกจากเสียงที่มันแทนในคำ (เช่นใน año)',
+        'contrast': {'es': 'n / ñ', 'th': 'คนละตัวอักษรและคนละเสียงกัน'},
+      },
+    },
+    '66666666-6666-4666-8666-666666666620': {
+      'id': '66666666-6666-4666-8666-666666666620',
+      'template_id': 'mcq',
+      'objective_id': '33333333-3333-4333-8333-333333333320',
+      'concept_id': null,
+      'prompt_th': 'ฟังเสียง /a/ แล้วเลือกตัวอักษรที่ตรงกับเสียงที่ได้ยิน',
+      'payload': {
+        'stem': '/a/',
+        'options': ['a', 'e', 'i', 'o'],
+      },
+      'answer_rules': {
+        'accepted': ['a'],
+        'accent_insensitive': true,
+        'error_codes': ['VOWEL.HEAR_CHOOSE'],
+      },
+      'feedback': {
+        'what_changed': 'a',
+        'why_th': 'เสียง /a/ อ้าปากกว้างที่สุดในบรรดาสระทั้ง 5 เสียงของภาษาสเปน',
+        'contrast': {'es': 'e, i, o, u', 'th': 'อ้าปากแคบกว่าหรือห่อริมฝีปาก'},
+      },
+    },
+    '66666666-6666-4666-8666-666666666621': {
+      'id': '66666666-6666-4666-8666-666666666621',
+      'template_id': 'mcq',
+      'objective_id': '33333333-3333-4333-8333-333333333321',
+      'concept_id': null,
+      'prompt_th': 'แยกคำว่า “casa” เป็นพยางค์ให้ถูกต้อง',
+      'payload': {
+        'stem': 'casa',
+        'options': ['ca-sa', 'cas-a', 'c-asa'],
+      },
+      'answer_rules': {
+        'accepted': ['ca-sa'],
+        'accent_insensitive': true,
+        'error_codes': ['SYLLABLE.SPLIT'],
+      },
+      'feedback': {
+        'what_changed': 'ca-sa',
+        'why_th':
+            'ภาษาสเปนมักแบ่งพยางค์ตรงพยัญชนะที่ตามด้วยสระ: c-a และ s-a จึงรวมเป็น ca-sa',
+        'contrast': {'es': 'cas-a', 'th': 'แบ่งผิดตำแหน่ง ไม่ตรงกับการออกเสียงจริง'},
+      },
+    },
+    '66666666-6666-4666-8666-666666666622': {
+      'id': '66666666-6666-4666-8666-666666666622',
+      'template_id': 'typed',
+      'objective_id': '33333333-3333-4333-8333-333333333322',
+      'concept_id': null,
+      'prompt_th': 'พิมพ์สระที่ปรากฏซ้ำสองครั้งในคำว่า “casa”',
+      'payload': {
+        'stem': 'c_s_',
+        'th': 'ตัวเดียว ปรากฏสองครั้งในคำนี้',
+      },
+      'answer_rules': {
+        'accepted': ['a'],
+        'accent_insensitive': true,
+        'error_codes': ['VOWEL.IDENTIFY'],
+      },
+      'feedback': {
+        'what_changed': 'a',
+        'why_th': 'casa สะกดด้วย c-a-s-a สระ a ปรากฏสองครั้งและออกเสียงเหมือนกันทุกครั้ง',
+        'contrast': {'es': 'e / i / o / u', 'th': 'ไม่ปรากฏในคำนี้'},
+      },
+    },
+    // scored_frame is what a recogniser would grade. This build has no ASR at
+    // all — see speaking_view.dart — so submitting only registers attempted
+    // evidence, never a verdict.
+    '66666666-6666-4666-8666-666666666623': {
+      'id': '66666666-6666-4666-8666-666666666623',
+      'template_id': 'repeat_speech',
+      'objective_id': '33333333-3333-4333-8333-333333333323',
+      'concept_id': null,
+      'prompt_th': 'กดปุ่มไมค์แล้วพูดว่า “casa”',
+      'payload': {
+        'es': 'casa',
+        'th': 'อ้าปากกว้างตอนออกเสียง a ทั้งสองครั้ง เสียงสั้นและคงที่',
+        'target_slug': 'vowel_a',
+        'focus': 'a',
+      },
+      'answer_rules': {
+        'frame_pattern': r'^casa\b',
+        'min_confidence': 0.5,
+        'error_codes': ['PRON.VOWEL_A'],
+      },
+      'feedback': {
+        'what_changed': '',
+        'why_th': 'สระ a ในภาษาสเปนออกเสียงคงที่ทุกครั้ง ไม่ว่าจะอยู่ตำแหน่งไหนของคำ',
+        'contrast': {'es': 'casa / caza', 'th': 'บ้าน / การล่าสัตว์ (เสียง c ต่างกัน ไม่ใช่ a)'},
+      },
+    },
     '66666666-6666-4666-8666-666666666604': {
       'id': '66666666-6666-4666-8666-666666666604',
       'template_id': 'mcq',

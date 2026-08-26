@@ -316,22 +316,38 @@ self-reference → Home → course map → Unit 1 → *Me llamo…* → audio co
 word/morphology sheet → ทำไม? → exercise → correction → retry → speaking →
 completion → progress → next recommendation.
 
-A second, real unit now precedes it: **Foundation 0 — *Hola, ¿qué tal?*** (course
-`sort_order: 0`, ahead of Unit 1's `sort_order: 1`), teaching the everyday
-greeting and *distinción* (`casa` /ˈkasa/ vs `caza` /ˈkaθa/) via the same
-schema-driven blocks and completion-rules contract as Unit 1 Lesson 3 — new
-UUIDs throughout, no existing id changed. `UnitSummary.sortOrder` is what makes
-the ordering explicit rather than incidental: both `PackCurriculumRepository`
-and `SupabaseCurriculumRepository` sort units by it rather than trusting
-insertion/query order.
+A second, real unit now precedes it: **Foundation 0 — เสียงและการอ่าน** (course
+`sort_order: 0`, ahead of Unit 1's `sort_order: 1`). Product rule: Foundation 0
+teaches letters, sounds and reading — it is *not* conversational Spanish, and
+only after it does Pre-A1 start with greetings/introductions. It is presented
+as ten major sections (`UnitSummary.sections` / `CourseSection`, referencing
+lessons by slug so the flat `lessons` list stays the single source of truth):
+Section 1 (the alphabet) and Section 2 (the vowel *a*, as the reusable
+pronunciation-card reference pattern) are authored; Sections 3–10 render as
+"เร็วๆ นี้" rather than being stubbed with placeholder lessons. The original
+*Hola, ¿qué tal?* lesson (teaching the everyday greeting and *distinción*:
+`casa` /ˈkasa/ vs `caza` /ˈkaθa/) keeps its id/slug/content untouched but now
+sits in a "bonus" section after the sound curriculum, not in front of it — new
+UUIDs throughout for the new lessons, no existing id changed.
+`UnitSummary.sortOrder` is what makes unit ordering explicit rather than
+incidental: both `PackCurriculumRepository` and `SupabaseCurriculumRepository`
+sort units by it rather than trusting insertion/query order.
+
+The `PronunciationCard` widget (`design_system/pronunciation_card.dart`) is the
+reusable pattern for every sound going forward: focus + IPA, an optional Thai
+pronunciation-bridge helper the learner can turn off ("แสดงคำอ่านไทย", see
+`LearnerPreferences.showThaiPronunciationHelp`), or — for sounds with no honest
+Thai equivalent — an explicit note instead of a misleading transliteration,
+plus a progressive "ทำไมออกเสียงแบบนี้?" disclosure for the fuller explanation,
+a worked example, and a minimal-pair contrast where one exists.
 
 **The player is schema-driven.** `features/lesson/block_renderers.dart` is a
 `Map<String, BlockBuilder>`; the player walks `lesson.blocks` and looks each
 type up. It contains no reference to "Me llamo" or to any specific lesson, so a
 second lesson is a data change and a new block type is one widget plus one map
-entry. Nine block types render: `example`, `pronunciation_guide`, `vocabulary`,
-`comparison`, `dialogue`, `exercise_embed`, `speaking_prompt`, `review`, plus
-`explanation`/`text`/`heading`/`tip`/`warning`. Unknown types degrade to a
+entry. Block types render: `example`, `pronunciation_guide`, `alphabet_grid`,
+`vocabulary`, `comparison`, `dialogue`, `exercise_embed`, `review`, plus
+`explanation`/`text`/`heading`. Unknown types degrade to a
 "update the app to see this" card rather than crashing the lesson.
 
 **ทำไม? resolves cheapest-first.** `why_l1_th` ships inside the lesson: instant,

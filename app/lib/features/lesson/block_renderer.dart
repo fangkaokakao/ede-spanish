@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../design_system/components.dart';
 import '../../design_system/learning_widgets.dart';
+import '../../design_system/pronunciation_card.dart';
 import '../../design_system/theme.dart';
 import '../../design_system/tokens.dart';
 import '../../domain/entities.dart';
@@ -37,7 +38,8 @@ class BlockRenderer extends ConsumerWidget {
       HeadingBlock(:final textTh) => _Heading(textTh),
       ExplanationBlock b => _Explanation(b),
       ExampleBlock b => _Example(b),
-      PronunciationBlock b => _Pronunciation(b),
+      PronunciationBlock b => PronunciationCard(block: b),
+      AlphabetBlock b => _Alphabet(b),
       ComparisonBlock b => _Comparison(b),
       DialogueBlock b => _Dialogue(b),
       VocabularyBlock b => _Vocabulary(b),
@@ -195,15 +197,18 @@ class _ExampleState extends ConsumerState<_Example> {
   }
 }
 
-class _Pronunciation extends ConsumerStatefulWidget {
-  const _Pronunciation(this.b);
-  final PronunciationBlock b;
+/// Letter recognition: a responsive grid of upper/lowercase pairs with each
+/// letter's own name (not its sound — that is taught per-phoneme by
+/// [PronunciationCard]).
+class _Alphabet extends ConsumerStatefulWidget {
+  const _Alphabet(this.b);
+  final AlphabetBlock b;
   @override
-  ConsumerState<_Pronunciation> createState() => _PronunciationState();
+  ConsumerState<_Alphabet> createState() => _AlphabetState();
 }
 
-class _PronunciationState extends ConsumerState<_Pronunciation> {
-  String? _note;
+class _AlphabetState extends ConsumerState<_Alphabet> {
+  String? _audioNote;
 
   @override
   Widget build(BuildContext context) {
@@ -214,7 +219,7 @@ class _PronunciationState extends ConsumerState<_Pronunciation> {
       if (path == null) return false;
       final ok = await audio.play(path, speed: speed);
       if (!ok && mounted) {
-        setState(() => _note = 'ยังไม่ได้ใส่ไฟล์เสียงในเวอร์ชันนี้');
+        setState(() => _audioNote = 'ยังไม่ได้ใส่ไฟล์เสียงในเวอร์ชันนี้');
       }
       return ok;
     }
@@ -222,78 +227,60 @@ class _PronunciationState extends ConsumerState<_Pronunciation> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        GrammarLabel(parts: ['การออกเสียง', b.focus]),
-        const SizedBox(height: EdeSpace.md),
-        // Phonemic and phonetic are shown separately because they are different
-        // claims: one is about the variety, one about this recording.
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        const GrammarLabel(parts: ['ตัวอักษรภาษาสเปน']),
+        if (b.introNoteTh != null) ...[
+          const SizedBox(height: EdeSpace.sm),
+          Text(b.introNoteTh!,
+              style: EdeType.thaiBodySmall.copyWith(color: context.tokens.inkFaint)),
+        ],
+        const SizedBox(height: EdeSpace.lg),
+        Wrap(
+          spacing: EdeSpace.sm,
+          runSpacing: EdeSpace.sm,
           children: [
-            Text(b.focus,
-                style: EdeType.spanishDisplay
-                    .copyWith(color: context.colors.onSurface)),
-            const SizedBox(width: EdeSpace.md),
-            if (b.ipaPhonemic != null)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: EdeSpace.sm, vertical: 2),
-                decoration: BoxDecoration(
-                  color: context.tokens.primarySurface,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text('/${b.ipaPhonemic}/',
-                    style: EdeType.numeric.copyWith(color: context.colors.primary)),
-              ),
+            for (final l in b.letters) _LetterTile(letter: l),
           ],
         ),
-        const SizedBox(height: EdeSpace.md),
-        Text(b.noteTh,
-            style: EdeType.thaiBody.copyWith(color: context.colors.onSurface)),
-        if (b.contrastA != null && b.contrastB != null) ...[
-          const SizedBox(height: EdeSpace.lg),
-          Container(
-            padding: const EdgeInsets.all(EdeSpace.lg),
-            decoration: BoxDecoration(
-              color: context.tokens.retrySurface,
-              borderRadius: BorderRadius.circular(EdeRadius.control),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(b.contrastA!,
-                        style: EdeType.spanishInline
-                            .copyWith(color: context.tokens.retry)),
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: EdeSpace.sm),
-                      child: Text('≠',
-                          style: TextStyle(color: context.tokens.retry)),
-                    ),
-                    Text(b.contrastB!,
-                        style: EdeType.spanishInline
-                            .copyWith(color: context.tokens.retry)),
-                  ],
-                ),
-                if (b.contrastNoteTh != null) ...[
-                  const SizedBox(height: EdeSpace.xs),
-                  Text(b.contrastNoteTh!,
-                      style: EdeType.thaiBodySmall
-                          .copyWith(color: context.colors.onSurface)),
-                ],
-              ],
-            ),
-          ),
-        ],
         const SizedBox(height: EdeSpace.lg),
         AudioControls(
           onNormal: () => play(b.audio.normal, 1.0),
-          onSlow: () => play(b.audio.slow ?? b.audio.normal, 0.7),
-          unavailableNote: _note,
+          onSlow: () => play(b.audio.slow ?? b.audio.normal, 0.75),
+          unavailableNote: _audioNote,
         ),
       ],
+    );
+  }
+}
+
+class _LetterTile extends StatelessWidget {
+  const _LetterTile({required this.letter});
+  final AlphabetLetter letter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '${letter.upper} ${letter.lower}, ชื่อตัวอักษร ${letter.nameTh}',
+      child: Container(
+        width: 76,
+        padding: const EdgeInsets.symmetric(
+            horizontal: EdeSpace.sm, vertical: EdeSpace.md),
+        decoration: BoxDecoration(
+          color: context.tokens.primarySurface,
+          borderRadius: BorderRadius.circular(EdeRadius.control),
+        ),
+        child: Column(
+          children: [
+            Text('${letter.upper}${letter.lower}',
+                style: EdeType.spanishBody
+                    .copyWith(color: context.colors.onSurface)),
+            const SizedBox(height: 2),
+            Text(letter.nameTh,
+                textAlign: TextAlign.center,
+                style: EdeType.thaiBodySmall
+                    .copyWith(color: context.tokens.inkSoft)),
+          ],
+        ),
+      ),
     );
   }
 }

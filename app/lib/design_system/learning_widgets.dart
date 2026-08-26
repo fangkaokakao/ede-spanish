@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/providers.dart';
 import '../domain/entities.dart';
 import 'components.dart';
 import 'theme.dart';
@@ -290,6 +292,79 @@ class RequirementChip extends StatelessWidget {
           Text(labelTh,
               style: EdeType.thaiBodySmall
                   .copyWith(color: done ? t.correct : t.inkSoft)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sets the frame for Foundation 0's whole course map, so a learner opening it
+/// immediately understands: "ฉันกำลังเรียนเสียงและการอ่านก่อนเริ่มภาษาสเปนจริง".
+class FoundationSoundIntroBanner extends StatelessWidget {
+  const FoundationSoundIntroBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(EdeSpace.lg),
+      decoration: BoxDecoration(
+        color: context.tokens.primarySurface,
+        borderRadius: BorderRadius.circular(EdeRadius.control),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const GrammarLabel(parts: ['Foundation 0', 'เสียงและการอ่าน']),
+          const SizedBox(height: EdeSpace.sm),
+          Text(
+            'ก่อนเริ่มภาษาสเปนจริง คุณจะได้เรียนรู้ตัวอักษร เสียง และวิธีอ่านออกเสียงให้แน่นก่อน '
+            'ยังไม่ใช่บทสนทนา — เรียนจบหมวดนี้แล้วค่อยไปทักทายและแนะนำตัวใน Pre-A1',
+            style:
+                EdeType.thaiBody.copyWith(color: context.colors.onSurface),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "แสดงคำอ่านไทย" — lets the learner turn the Thai pronunciation-bridge
+/// helper on [PronunciationCard] on or off. On by default for absolute
+/// beginners.
+class ThaiHelperToggle extends ConsumerWidget {
+  const ThaiHelperToggle({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(preferencesProvider).valueOrNull;
+    final enabled = prefs?.showThaiPronunciationHelp ?? true;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: EdeSpace.lg, vertical: EdeSpace.sm),
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(EdeRadius.control),
+        border: Border.all(color: context.colors.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text('แสดงคำอ่านไทยช่วยจำ',
+                style: EdeType.thaiBody
+                    .copyWith(color: context.colors.onSurface)),
+          ),
+          Switch(
+            value: enabled,
+            onChanged: prefs == null
+                ? null
+                : (v) async {
+                    await ref.read(learnerRepositoryProvider).savePreferences(
+                        prefs.copyWith(showThaiPronunciationHelp: v));
+                    ref.invalidate(preferencesProvider);
+                  },
+          ),
         ],
       ),
     );
