@@ -44,25 +44,46 @@ class PackCurriculumRepository implements CurriculumRepository {
     return _unit(raw.cast<String, dynamic>());
   }
 
-  UnitSummary _unit(Map<String, dynamic> m) => UnitSummary(
-        id: m['id'] as String,
-        slug: m['slug'] as String,
-        titleTh: m['title_th'] as String,
-        titleEs: m['title_es'] as String?,
-        subtitleTh: m['subtitle_th'] as String,
-        level: CefrX.parse(m['level'] as String),
-        sortOrder: m['sort_order'] as int,
-        lessons: (m['lessons'] as List).map((e) {
-          final l = (e as Map).cast<String, dynamic>();
-          return LessonSummary(
-            id: l['id'] as String,
-            slug: l['slug'] as String,
-            titleTh: l['title_th'] as String,
-            estimatedMinutes: l['estimated_minutes'] as int,
-            sortOrder: l['sort_order'] as int,
-          );
-        }).toList(),
+  UnitSummary _unit(Map<String, dynamic> m) {
+    final lessons = (m['lessons'] as List).map((e) {
+      final l = (e as Map).cast<String, dynamic>();
+      return LessonSummary(
+        id: l['id'] as String,
+        slug: l['slug'] as String,
+        titleTh: l['title_th'] as String,
+        estimatedMinutes: l['estimated_minutes'] as int,
+        sortOrder: l['sort_order'] as int,
       );
+    }).toList();
+
+    // Sections only reference lessons by slug — `lessons` above remains the
+    // single source of truth for lesson data, so a section can never drift
+    // out of sync with the flat list.
+    final sections = (m['sections'] as List? ?? const []).map((e) {
+      final s = (e as Map).cast<String, dynamic>();
+      final slugs = (s['lesson_slugs'] as List).cast<String>();
+      return CourseSection(
+        id: s['id'] as String,
+        titleTh: s['title_th'] as String,
+        descriptionTh: s['description_th'] as String,
+        sortOrder: s['sort_order'] as int,
+        lessons: lessons.where((l) => slugs.contains(l.slug)).toList(),
+      );
+    }).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    return UnitSummary(
+      id: m['id'] as String,
+      slug: m['slug'] as String,
+      titleTh: m['title_th'] as String,
+      titleEs: m['title_es'] as String?,
+      subtitleTh: m['subtitle_th'] as String,
+      level: CefrX.parse(m['level'] as String),
+      sortOrder: m['sort_order'] as int,
+      lessons: lessons,
+      sections: sections,
+    );
+  }
 
   @override
   Future<Lesson> lesson(String lessonId) async {
@@ -227,6 +248,7 @@ class LocalLearnerRepository implements LearnerRepository {
   static const _kSelfRef = 'self_reference';
   static const _kStudied = 'has_studied_before';
   static const _kOnboarded = 'onboarding_complete';
+  static const _kShowThaiHelp = 'show_thai_pronunciation_help';
 
   @override
   Future<LearnerPreferences> preferences() async {
@@ -241,6 +263,9 @@ class LocalLearnerRepository implements LearnerRepository {
           .firstWhere((s) => s.wire == m[_kSelfRef], orElse: () => SelfReference.both),
       hasStudiedBefore: m[_kStudied] == 'true',
       onboardingComplete: m[_kOnboarded] == 'true',
+      // Defaults on: absolute beginners need the Thai bridge until they
+      // choose to turn it off.
+      showThaiPronunciationHelp: m[_kShowThaiHelp] != 'false',
     );
   }
 
@@ -251,6 +276,7 @@ class LocalLearnerRepository implements LearnerRepository {
     await _db.setPreference(_kSelfRef, p.selfReference.wire);
     await _db.setPreference(_kStudied, '${p.hasStudiedBefore}');
     await _db.setPreference(_kOnboarded, '${p.onboardingComplete}');
+    await _db.setPreference(_kShowThaiHelp, '${p.showThaiPronunciationHelp}');
   }
 
   @override

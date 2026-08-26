@@ -46,6 +46,7 @@ class UnitSummary {
     required this.level,
     required this.lessons,
     required this.sortOrder,
+    this.sections = const [],
   });
   final String id, slug, titleTh, subtitleTh;
   final String? titleEs;
@@ -57,6 +58,32 @@ class UnitSummary {
   /// caller sorts by this field, so a unit inserted ahead of an existing one
   /// (e.g. a Foundation unit before Unit 1) reorders correctly everywhere.
   final int sortOrder;
+
+  /// Optional presentational grouping of [lessons] into major course
+  /// sections (e.g. Foundation 0's "รู้จักตัวอักษร" / "สระ" / ... map). Empty
+  /// for units that have no sub-structure yet — those fall back to a flat
+  /// lesson list. [lessons] remains the single source of truth for lesson
+  /// data; a section only references lessons by slug, so nothing can drift.
+  final List<CourseSection> sections;
+}
+
+/// A major grouping of lessons within a unit's course map, e.g. Foundation
+/// 0's ten sound-and-reading sections. A section with an empty [lessons] list
+/// has no authored content yet and is shown as "เร็วๆ นี้" rather than being
+/// stubbed with placeholder lessons.
+class CourseSection {
+  const CourseSection({
+    required this.id,
+    required this.titleTh,
+    required this.descriptionTh,
+    required this.sortOrder,
+    required this.lessons,
+  });
+  final String id, titleTh, descriptionTh;
+  final int sortOrder;
+  final List<LessonSummary> lessons;
+
+  int get totalMinutes => lessons.fold(0, (a, l) => a + l.estimatedMinutes);
 }
 
 class LessonSummary {
@@ -290,6 +317,25 @@ sealed class ContentBlock {
           contrastB: (p['contrast_pair'] as Map?)?['b'] as String?,
           contrastNoteTh: (p['contrast_pair'] as Map?)?['note_th'] as String?,
           audio: AudioRef.fromJson((p['audio'] as Map?)?.cast<String, dynamic>()),
+          thaiHelperTh: p['thai_helper_th'] as String?,
+          noEquivalentNoteTh: p['no_equivalent_note_th'] as String?,
+          exampleEs: p['example_es'] as String?,
+          exampleMeaningTh: p['example_meaning_th'] as String?,
+          exampleReadingTh: p['example_reading_th'] as String?,
+          exampleSyllables:
+              (p['example_syllables'] as List? ?? const []).cast<String>(),
+          showSpainBadge: (p['show_spain_badge'] as bool?) ?? false,
+        ),
+      'alphabet_grid' => AlphabetBlock(
+          id: id,
+          sortOrder: order,
+          conceptId: concept,
+          whyL1Th: why,
+          introNoteTh: p['intro_note_th'] as String?,
+          audio: AudioRef.fromJson((p['audio'] as Map?)?.cast<String, dynamic>()),
+          letters: (p['letters'] as List)
+              .map((e) => AlphabetLetter.fromJson((e as Map).cast<String, dynamic>()))
+              .toList(),
         ),
       'comparison' => ComparisonBlock(
           id: id,
@@ -384,9 +430,68 @@ class PronunciationBlock extends ContentBlock {
     this.contrastB,
     this.contrastNoteTh,
     this.audio = const AudioRef(),
+    this.thaiHelperTh,
+    this.noEquivalentNoteTh,
+    this.exampleEs,
+    this.exampleMeaningTh,
+    this.exampleReadingTh,
+    this.exampleSyllables = const [],
+    this.showSpainBadge = false,
   });
   final String targetSlug, focus, noteTh;
   final String? ipaPhonemic, ipaPhonetic, contrastA, contrastB, contrastNoteTh;
+  final AudioRef audio;
+
+  /// Thai transliteration bridge (e.g. "อา" for the vowel /a/). A learning
+  /// aid only — never implies the Thai and Spanish sounds are identical. Null
+  /// when the sound has no good Thai equivalent; [noEquivalentNoteTh] then
+  /// carries an explicit explanation instead of a misleading transcription.
+  final String? thaiHelperTh;
+  final String? noEquivalentNoteTh;
+
+  /// A worked example the card can progressively disclose: the word, its
+  /// meaning, its Thai-bridge reading, and its syllable segmentation.
+  final String? exampleEs, exampleMeaningTh, exampleReadingTh;
+  final List<String> exampleSyllables;
+
+  /// Shown only when the card exists to contrast Spain Spanish against
+  /// another variety (distinción, yeísmo) — never on a plain vowel/letter
+  /// sound that has no such contrast to make.
+  final bool showSpainBadge;
+}
+
+class AlphabetLetter {
+  const AlphabetLetter({
+    required this.upper,
+    required this.lower,
+    required this.nameEs,
+    required this.nameTh,
+  });
+  final String upper, lower, nameEs, nameTh;
+
+  factory AlphabetLetter.fromJson(Map<String, dynamic> j) => AlphabetLetter(
+        upper: j['upper'] as String,
+        lower: j['lower'] as String,
+        nameEs: j['name_es'] as String,
+        nameTh: j['name_th'] as String,
+      );
+}
+
+/// The Spanish alphabet as a recognisable grid: upper/lowercase pairs and the
+/// letter's own name (not its sound — a name like "efe" or "eñe" is taught
+/// here; individual phonemes are taught by [PronunciationBlock]).
+class AlphabetBlock extends ContentBlock {
+  const AlphabetBlock({
+    required super.id,
+    required super.sortOrder,
+    super.conceptId,
+    super.whyL1Th,
+    required this.letters,
+    this.introNoteTh,
+    this.audio = const AudioRef(),
+  });
+  final List<AlphabetLetter> letters;
+  final String? introNoteTh;
   final AudioRef audio;
 }
 
@@ -699,6 +804,7 @@ class LearnerPreferences {
     this.hasStudiedBefore = false,
     this.onboardingComplete = false,
     this.explanationDepth = 1,
+    this.showThaiPronunciationHelp = true,
   });
 
   final LearningGoal? goal;
@@ -707,6 +813,11 @@ class LearnerPreferences {
   final bool hasStudiedBefore, onboardingComplete;
   final int explanationDepth;
 
+  /// "แสดงคำอ่านไทย" — the learner's toggle for the Thai pronunciation-bridge
+  /// helper on [PronunciationBlock] cards. On by default for absolute
+  /// beginners; a learner can turn it off as they advance.
+  final bool showThaiPronunciationHelp;
+
   LearnerPreferences copyWith({
     LearningGoal? goal,
     int? dailyGoalMinutes,
@@ -714,6 +825,7 @@ class LearnerPreferences {
     bool? hasStudiedBefore,
     bool? onboardingComplete,
     int? explanationDepth,
+    bool? showThaiPronunciationHelp,
   }) =>
       LearnerPreferences(
         goal: goal ?? this.goal,
@@ -722,6 +834,8 @@ class LearnerPreferences {
         hasStudiedBefore: hasStudiedBefore ?? this.hasStudiedBefore,
         onboardingComplete: onboardingComplete ?? this.onboardingComplete,
         explanationDepth: explanationDepth ?? this.explanationDepth,
+        showThaiPronunciationHelp:
+            showThaiPronunciationHelp ?? this.showThaiPronunciationHelp,
       );
 }
 

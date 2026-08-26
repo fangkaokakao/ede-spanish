@@ -151,13 +151,17 @@ class _UnitCard extends ConsumerWidget {
         .length;
     final currentIndex = unit.lessons.indexWhere(
         (l) => progress[l.id]?.state != LessonState.completed);
+    final isFoundation = unit.sections.isNotEmpty;
 
     return EdeCard(
       padding: const EdgeInsets.all(EdeSpace.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GrammarLabel(parts: [unit.level.label, 'หน่วยที่ $position']),
+          GrammarLabel(parts: [
+            unit.level.label,
+            isFoundation ? 'ปูพื้นฐาน' : 'หน่วยที่ $position',
+          ]),
           const SizedBox(height: 6),
           Text(unit.titleTh,
               style: EdeType.thaiTitle.copyWith(color: context.colors.onSurface)),
@@ -176,15 +180,133 @@ class _UnitCard extends ConsumerWidget {
             currentIndex: currentIndex < 0 ? unit.lessons.length : currentIndex,
           ),
           const SizedBox(height: EdeSpace.lg),
-          Divider(color: context.colors.outlineVariant),
-          for (final l in unit.lessons)
-            _LessonRow(
-              lesson: l,
-              state: progress[l.id]?.state ?? LessonState.notStarted,
-              // Only lessons the pack actually contains are enterable.
-              enterable: kAvailableLessonSlugs.contains(l.slug),
-            ),
+          if (isFoundation) ...[
+            const FoundationSoundIntroBanner(),
+            const SizedBox(height: EdeSpace.lg),
+            const ThaiHelperToggle(),
+            const SizedBox(height: EdeSpace.lg),
+            for (final s in unit.sections)
+              Padding(
+                padding: const EdgeInsets.only(bottom: EdeSpace.md),
+                child: _SectionGroup(section: s, progress: progress),
+              ),
+          ] else ...[
+            Divider(color: context.colors.outlineVariant),
+            for (final l in unit.lessons)
+              _LessonRow(
+                lesson: l,
+                state: progress[l.id]?.state ?? LessonState.notStarted,
+                // Only lessons the pack actually contains are enterable.
+                enterable: kAvailableLessonSlugs.contains(l.slug),
+              ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// One major Foundation 0 section card: number/bonus badge, title, short Thai
+/// description, and either its lesson(s) (current/completed/locked, exactly
+/// like a normal unit) or a plain "เร็วๆ นี้" note when nothing is authored
+/// for it yet — never a stubbed, unenterable lesson row.
+class _SectionGroup extends StatelessWidget {
+  const _SectionGroup({required this.section, required this.progress});
+
+  final CourseSection section;
+  final Map<String, LessonProgress> progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final isBonus = section.sortOrder >= 100;
+    final hasLessons = section.lessons.isNotEmpty;
+    final completed = section.lessons
+        .where((l) => progress[l.id]?.state == LessonState.completed)
+        .length;
+    final allDone = hasLessons && completed == section.lessons.length;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(EdeSpace.lg),
+      decoration: BoxDecoration(
+        color: hasLessons ? context.colors.surface : context.colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(EdeRadius.control),
+        border: Border.all(color: context.colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionBadge(bonus: isBonus, done: allDone, active: hasLessons),
+              const SizedBox(width: EdeSpace.md),
+              // A vertical stack (rather than a trailing Row item) so the
+              // minutes/"เร็วๆ นี้" marker wraps under the title instead of
+              // forcing a fixed-width sibling to fight the title for space —
+              // at 200% text scale that fight is what overflowed the Row.
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(section.titleTh,
+                        style: EdeType.thaiBody.copyWith(
+                          color: context.colors.onSurface,
+                          fontWeight: FontWeight.w600,
+                        )),
+                    const SizedBox(height: 2),
+                    Text(section.descriptionTh,
+                        style: EdeType.thaiBodySmall
+                            .copyWith(color: t.inkSoft)),
+                    const SizedBox(height: 4),
+                    Text(
+                      hasLessons ? '${section.totalMinutes} นาที' : 'เร็วๆ นี้',
+                      style: EdeType.numeric.copyWith(color: t.inkFaint),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (hasLessons) ...[
+            const SizedBox(height: EdeSpace.sm),
+            Divider(color: context.colors.outlineVariant),
+            for (final l in section.lessons)
+              _LessonRow(
+                lesson: l,
+                state: progress[l.id]?.state ?? LessonState.notStarted,
+                enterable: kAvailableLessonSlugs.contains(l.slug),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionBadge extends StatelessWidget {
+  const _SectionBadge(
+      {required this.bonus, required this.done, required this.active});
+  final bool bonus, done, active;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    if (done) {
+      return CircleAvatar(
+        radius: 16,
+        backgroundColor: t.correctSurface,
+        child: Icon(Icons.check_rounded, size: 18, color: t.correct),
+      );
+    }
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: active ? t.primarySurface : context.colors.outlineVariant,
+      child: Icon(
+        bonus ? Icons.card_giftcard_rounded : Icons.circle_outlined,
+        size: 16,
+        color: active ? context.colors.primary : t.inkFaint,
       ),
     );
   }
@@ -222,19 +344,32 @@ class _LessonRow extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: kMinTap + 4),
           padding: const EdgeInsets.symmetric(vertical: EdeSpace.md),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(icon, size: 22, color: colour),
               const SizedBox(width: EdeSpace.md),
+              // The minutes/"เร็วๆ นี้" marker sits under the title, not as a
+              // fixed-width trailing Row item, so it never has to fight the
+              // title for horizontal space at large text scales.
               Expanded(
-                child: Text(lesson.titleTh,
-                    style: EdeType.thaiBody.copyWith(
-                      color: enterable || done
-                          ? context.colors.onSurface
-                          : t.inkFaint,
-                    )),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(lesson.titleTh,
+                        style: EdeType.thaiBody.copyWith(
+                          color: enterable || done
+                              ? context.colors.onSurface
+                              : t.inkFaint,
+                        )),
+                    const SizedBox(height: 2),
+                    Text(
+                        enterable || done
+                            ? '${lesson.estimatedMinutes} นาที'
+                            : 'เร็วๆ นี้',
+                        style: EdeType.numeric.copyWith(color: t.inkFaint)),
+                  ],
+                ),
               ),
-              Text(enterable || done ? '${lesson.estimatedMinutes} นาที' : 'เร็วๆ นี้',
-                  style: EdeType.numeric.copyWith(color: t.inkFaint)),
             ],
           ),
         ),
