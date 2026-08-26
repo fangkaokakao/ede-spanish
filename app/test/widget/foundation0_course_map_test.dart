@@ -52,6 +52,12 @@ void main() {
     expect(toggle, findsOneWidget);
     expect(tester.widget<Switch>(toggle).value, isTrue);
 
+    // The toggle sits below the fold on a real phone viewport, so scroll it
+    // into view first — tapping an off-screen widget would only prove the
+    // hit-test coordinates line up, not that a learner can actually reach it.
+    await tester.ensureVisible(toggle);
+    await tester.pumpAndSettle();
+
     await tester.tap(toggle);
     await tester.pumpAndSettle();
 

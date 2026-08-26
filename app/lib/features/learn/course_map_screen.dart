@@ -242,6 +242,10 @@ class _SectionGroup extends StatelessWidget {
             children: [
               _SectionBadge(bonus: isBonus, done: allDone, active: hasLessons),
               const SizedBox(width: EdeSpace.md),
+              // A vertical stack (rather than a trailing Row item) so the
+              // minutes/"เร็วๆ นี้" marker wraps under the title instead of
+              // forcing a fixed-width sibling to fight the title for space —
+              // at 200% text scale that fight is what overflowed the Row.
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,13 +259,13 @@ class _SectionGroup extends StatelessWidget {
                     Text(section.descriptionTh,
                         style: EdeType.thaiBodySmall
                             .copyWith(color: t.inkSoft)),
+                    const SizedBox(height: 4),
+                    Text(
+                      hasLessons ? '${section.totalMinutes} นาที' : 'เร็วๆ นี้',
+                      style: EdeType.numeric.copyWith(color: t.inkFaint),
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(width: EdeSpace.sm),
-              Text(
-                hasLessons ? '${section.totalMinutes} นาที' : 'เร็วๆ นี้',
-                style: EdeType.numeric.copyWith(color: t.inkFaint),
               ),
             ],
           ),
@@ -340,19 +344,32 @@ class _LessonRow extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: kMinTap + 4),
           padding: const EdgeInsets.symmetric(vertical: EdeSpace.md),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(icon, size: 22, color: colour),
               const SizedBox(width: EdeSpace.md),
+              // The minutes/"เร็วๆ นี้" marker sits under the title, not as a
+              // fixed-width trailing Row item, so it never has to fight the
+              // title for horizontal space at large text scales.
               Expanded(
-                child: Text(lesson.titleTh,
-                    style: EdeType.thaiBody.copyWith(
-                      color: enterable || done
-                          ? context.colors.onSurface
-                          : t.inkFaint,
-                    )),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(lesson.titleTh,
+                        style: EdeType.thaiBody.copyWith(
+                          color: enterable || done
+                              ? context.colors.onSurface
+                              : t.inkFaint,
+                        )),
+                    const SizedBox(height: 2),
+                    Text(
+                        enterable || done
+                            ? '${lesson.estimatedMinutes} นาที'
+                            : 'เร็วๆ นี้',
+                        style: EdeType.numeric.copyWith(color: t.inkFaint)),
+                  ],
+                ),
               ),
-              Text(enterable || done ? '${lesson.estimatedMinutes} นาที' : 'เร็วๆ นี้',
-                  style: EdeType.numeric.copyWith(color: t.inkFaint)),
             ],
           ),
         ),
